@@ -1,6 +1,6 @@
 from dash import Dash, dcc, html, Input, Output
 import os
-import page3, page1, page2, page4  # These are the converted pages from your original files
+import  page1, page2, page3, page4
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 server = app.server

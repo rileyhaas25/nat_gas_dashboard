@@ -97,6 +97,7 @@ layout = html.Div([
 # Dynamic chart update callback
 @callback(
     Output("benchmark-chart", "figure"),
+    Output("last-updated", "children"),
     Input("interval", "n_intervals")
 )
 def update_chart(n_intervals):

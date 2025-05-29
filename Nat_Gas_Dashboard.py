@@ -1,6 +1,9 @@
 from dash import Dash, dcc, html, Input, Output
 import os
-import page1, page2, page3, page4  # Make sure these exist in your project folder
+import page1
+import page2
+import page3
+import page4
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 server = app.server

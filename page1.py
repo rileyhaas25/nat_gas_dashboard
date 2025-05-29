@@ -84,7 +84,7 @@ def get_last_modified_time():
     latest_file = max(files, key=lambda f: f.stat().st_mtime)
     utc_time = datetime.datetime.fromtimestamp(latest_file.stat().st_mtime, tz=datetime.UTC)
     eastern = pytz.timezone("America/New_York")
-    local_time = pytz.utc.localize(utc_time).astimezone(eastern)
+    local_time = utc_time.astimezone(eastern)
     return f"Last updated: {local_time.strftime('%B %d, %Y at %I:%M %p %Z')}"
 
 

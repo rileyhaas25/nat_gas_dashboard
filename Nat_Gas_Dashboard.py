@@ -1,6 +1,6 @@
 from dash import Dash, dcc, html, Input, Output
 import os
-import  page1, page2, page3, page4
+import page1, page2, page3, page4  # Make sure these exist in your project folder
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 server = app.server
@@ -29,9 +29,10 @@ def display_page(pathname):
     else:
         return html.H1("404 - Page Not Found")
 
-page2.register_callbacks(app)
+# Register any callbacks defined in other pages
+if hasattr(page2, "register_callbacks"):
+    page2.register_callbacks(app)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=True)
-

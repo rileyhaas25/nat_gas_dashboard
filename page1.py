@@ -3,6 +3,11 @@ import plotly.express as px
 from dash import html, dcc, Input, Output, callback
 from pathlib import Path
 import datetime
+import pytz
+
+# Henry Hub Data: https://fred.stlouisfed.org/series/DHHNGSP
+# TTF Data: https://www.investing.com/commodities/dutch-ttf-gas-c1-futures-historical-data
+# JKM Data: https://www.investing.com/commodities/lng-japan-korea-marker-platts-futures-historical-data
 
 # Constants
 conversion_rate = 10.6  # EUR/MWh to USD/MMBtu
@@ -77,8 +82,10 @@ def get_last_modified_time():
     if not files:
         return "No files found"
     latest_file = max(files, key=lambda f: f.stat().st_mtime)
-    mtime = datetime.datetime.fromtimestamp(latest_file.stat().st_mtime)
-    return f"Last updated: {mtime.strftime('%B %d, %Y at %I:%M %p')}"
+    utc_time = datetime.datetime.utcfromtimestamp(latest_file.stat().st_mtime)
+    eastern = pytz.timezone("America/New_York")
+    local_time = pytz.utc.localize(utc_time).astimezone(eastern)
+    return f"Last updated: {local_time.strftime('%B %d, %Y at %I:%M %p %Z')}"
 
 
 # Load to preview result

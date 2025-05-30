@@ -44,7 +44,8 @@ def load_ttf() -> pd.DataFrame:
         return pd.DataFrame(columns=["Date", "TTF (USD)"])
     df = pd.read_csv(ttf_path)
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df["TTF (USD)"] = pd.to_numeric(df["Price"], errors="coerce") / conversion_rate
+    eur_usd_rate = 1.13
+    df["TTF (USD)"] = pd.to_numeric(df["Price"], errors="coerce") * eur_usd_rate / 2.93
     return df[["Date", "TTF (USD)"]].dropna()
 
 # Function to merge all daily benchmark data into a wide-format DataFrame

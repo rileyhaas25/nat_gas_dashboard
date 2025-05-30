@@ -83,7 +83,8 @@ def create_benchmark_price_chart(df):
     )
     fig.update_layout(
         template="plotly_white",
-        legend_title_text="Benchmark"
+        legend_title_text="Benchmark",
+        yaxis_title= "Price"
     )
     return fig
 

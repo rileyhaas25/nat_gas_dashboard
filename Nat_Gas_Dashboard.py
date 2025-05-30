@@ -4,7 +4,7 @@ import page1
 import page2
 import page3
 import page4
-from waitress import serve
+
 app = Dash(__name__, suppress_callback_exceptions=True)
 server = app.server
 
@@ -37,4 +37,4 @@ if hasattr(page2, "register_callbacks"):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    serve(app, host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port)

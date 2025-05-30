@@ -7,7 +7,6 @@ import pytz
 import requests
 
 # Constants
-conversion_rate = 10.6  # EUR/MWh to USD/MMBtu
 data_dir = Path(__file__).resolve().parent  # Folder where files are uploaded
 
 # Function to load the most recent file containing a specific keyword
@@ -60,9 +59,8 @@ def load_ttf() -> pd.DataFrame:
         return pd.DataFrame(columns=["Date", "TTF (USD)"])
     df = pd.read_csv(ttf_path)
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    eur_usd_rate = fetch_usd_to_eur()
-    print(eur_usd_rate)
-    df["TTF (USD)"] = pd.to_numeric(df["Price"], errors="coerce") * (1 / eur_usd_rate) / 2.93
+    eur_usd_rate = 1.14
+    df["TTF (USD)"] = pd.to_numeric(df["Price"], errors="coerce") * (eur_usd_rate) / 2.93
     return df[["Date", "TTF (USD)"]].dropna()
 
 # Function to merge all daily benchmark data into a wide-format DataFrame

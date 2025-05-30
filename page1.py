@@ -4,6 +4,7 @@ from dash import html, dcc, Input, Output, callback
 from pathlib import Path
 import datetime
 import pytz
+import requests
 
 # Constants
 conversion_rate = 10.6  # EUR/MWh to USD/MMBtu
@@ -37,6 +38,21 @@ def load_jkm() -> pd.DataFrame:
     df["JKM"] = pd.to_numeric(df["Price"], errors="coerce")
     return df[["Date", "JKM"]].dropna()
 
+
+def fetch_usd_to_eur():
+    url = "http://api.exchangerate.host/live?access_key=42323ce3918aad72fb287c81791e89da"
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        raise Exception("Failed to fetch exchange rate: HTTP error")
+
+    data = response.json()
+    try:
+        rate = data["quotes"]["USDEUR"]
+        return rate
+    except KeyError:
+        raise Exception("Unexpected response format. Could not find USDEUR in quotes.")
+
 # Function to load and clean TTF CSV data, converting to USD
 def load_ttf() -> pd.DataFrame:
     ttf_path = load_latest_file("TTF")
@@ -44,8 +60,9 @@ def load_ttf() -> pd.DataFrame:
         return pd.DataFrame(columns=["Date", "TTF (USD)"])
     df = pd.read_csv(ttf_path)
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    eur_usd_rate = 1.13
-    df["TTF (USD)"] = pd.to_numeric(df["Price"], errors="coerce") * eur_usd_rate / 2.93
+    eur_usd_rate = fetch_usd_to_eur()
+    print(eur_usd_rate)
+    df["TTF (USD)"] = pd.to_numeric(df["Price"], errors="coerce") * (1 / eur_usd_rate) / 2.93
     return df[["Date", "TTF (USD)"]].dropna()
 
 # Function to merge all daily benchmark data into a wide-format DataFrame

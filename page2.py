@@ -4,12 +4,16 @@ import pandas as pd
 from dash import html, dcc, dash_table, Input, Output
 import plotly.express as px
 import plotly.graph_objects as go
+from pathlib import Path
 
 # update quarterly here under Pipeline Projects: https://www.eia.gov/naturalgas/data.php#imports
 pipeline_url = "https://www.eia.gov/naturalgas/pipelines/EIA-NaturalGasPipelineProjects_Apr2025.xlsx"
 
 # update monthly under U.S. working natural gas in storage: https://www.eia.gov/outlooks/steo/data.php
 storage_url = "https://www.eia.gov/outlooks/steo/xls/Fig27.xlsx"
+
+# update monthly under: https://ec.europa.eu/eurostat/databrowser/view/nrg_stk_gasm__custom_16946737/default/table?lang=en
+data_dir = Path(__file__).resolve().parent
 
 def download_pipeline_excel(url, save_dir=None, filename="pipeline_projects.xlsx"):
     if save_dir is None:
@@ -42,6 +46,48 @@ def download_storage_excel(url, save_dir=None, filename="monthly_gas_storage.xls
 
     print(f"Downloaded to: {full_path}")
     return full_path
+
+def load_latest_file(keyword: str, ext=".csv") -> Path | None:
+    files = list(data_dir.glob(f"*{keyword}*{ext}"))
+    if not files:
+        return None
+    return max(files, key=lambda f: f.stat().st_mtime)
+
+def load_eu_storage() -> pd.DataFrame:
+    eur_stor_path = load_latest_file("EUR", ext=".xlsx")
+    df = pd.read_excel(eur_stor_path, sheet_name="Sheet 1", header=7, engine="openpyxl")
+    # Drop empty and non-country rows
+    df = df.dropna(subset=["GEO (Labels)"])
+    df = df[~df["GEO (Labels)"].str.contains("European Union|Total", na=False)]
+
+    # Drop non-date columns
+    df_clean = df.drop(columns=["GEO (Labels)"])
+    df_clean = df_clean.apply(pd.to_numeric, errors="coerce") * 0.035314666572
+
+    # Transpose so each row is a date
+    df_transposed = df_clean.T
+    df_transposed.columns = df["GEO (Labels)"].values
+    df_transposed.index = pd.to_datetime(df_transposed.index, errors="coerce")
+
+    # Total monthly storage
+    df_transposed["Total"] = df_transposed.sum(axis=1)
+
+    # Build a 5-year rolling average + min/max by month
+    monthly = df_transposed["Total"].groupby(df_transposed.index.month)
+
+    avg = monthly.transform("mean")
+    high = monthly.transform("max")
+    low = monthly.transform("min")
+
+    result = pd.DataFrame({
+        "Date": df_transposed.index,
+        "Total": df_transposed["Total"],
+        "5-Year Avg": avg,
+        "5-Year High": high,
+        "5-Year Low": low,
+    }).dropna()
+
+    return result
 
 def clean_pipeline_data(file_path):
     # Load from row 2 (zero-indexed row 1) as header
@@ -141,12 +187,45 @@ def create_storage_figure(df):
     )
     return fig
 
+def create_eu_storage_chart(df):
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=df["Date"], y=df["Total"],
+        name="European Storage", mode="lines", line=dict(color="blue")
+    ))
+    # 5-Year Range Band (like U.S. method)
+    fig.add_trace(go.Scatter(
+        x=pd.concat([df["Date"], df["Date"][::-1]]),
+        y=pd.concat([df["5-Year High"], df["5-Year Low"][::-1]]),
+        fill="toself",
+        fillcolor="rgba(200,200,200,0.4)",
+        line=dict(color="rgba(255,255,255,0)"),
+        hoverinfo="skip",
+        showlegend=True,
+        name="5-Year Range"
+    ))
+    # 5-Year Average
+    fig.add_trace(go.Scatter(
+        x=df["Date"], y=df["5-Year Avg"],
+        name="5-Year Avg", mode="lines", line=dict(color="black", dash="dash")
+    ))
+    fig.update_layout(
+        title="European Natural Gas Storage vs. 5-Year Range",
+        template="plotly_white",
+        yaxis_title="Storage (Bcf)",
+        xaxis_title="Year"
+    )
+    return fig
+
 pipeline_file_path = download_pipeline_excel(pipeline_url)
 pipeline_df = clean_pipeline_data(pipeline_file_path)
 storage_file_path = download_storage_excel(storage_url)
 storage_df = clean_storage_data(storage_file_path)
 storage_figure = create_storage_figure(storage_df)
 capacity_chart = create_capacity_by_year_chart(pipeline_df)
+eu_storage_df = load_eu_storage()
+eu_storage_fig = create_eu_storage_chart(eu_storage_df)
 
 # Create dropdown options
 status_options = [{"label": s, "value": s} for s in sorted(pipeline_df["Status"].dropna().unique())]
@@ -190,8 +269,12 @@ layout = html.Div([
     ),
 
     html.H2("U.S. Natural Gas Storage Data"),
-    dcc.Graph(figure=storage_figure)
+    dcc.Graph(figure=storage_figure),
+
+    html.H2("European Natural Gas Storage Data"),
+    dcc.Graph(figure=eu_storage_fig)
 ])
+
 def register_callbacks(app):
     @app.callback(
         Output("pipeline-table", "data"),

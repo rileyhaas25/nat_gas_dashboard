@@ -4,7 +4,6 @@ from dash import html, dcc, Input, Output, callback
 from pathlib import Path
 import datetime
 import pytz
-import requests
 
 # Constants
 data_dir = Path(__file__).resolve().parent  # Folder where files are uploaded
@@ -36,21 +35,6 @@ def load_jkm() -> pd.DataFrame:
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df["JKM"] = pd.to_numeric(df["Price"], errors="coerce")
     return df[["Date", "JKM"]].dropna()
-
-
-def fetch_usd_to_eur():
-    url = "http://api.exchangerate.host/live?access_key=42323ce3918aad72fb287c81791e89da"
-    response = requests.get(url)
-
-    if response.status_code != 200:
-        raise Exception("Failed to fetch exchange rate: HTTP error")
-
-    data = response.json()
-    try:
-        rate = data["quotes"]["USDEUR"]
-        return rate
-    except KeyError:
-        raise Exception("Unexpected response format. Could not find USDEUR in quotes.")
 
 # Function to load and clean TTF CSV data, converting to USD
 def load_ttf() -> pd.DataFrame:

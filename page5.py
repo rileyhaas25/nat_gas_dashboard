@@ -133,7 +133,7 @@ def create_eu_storage_chart(df):
 
     fig.add_trace(go.Scatter(
         x=df["Date"], y=df["Total"],
-        name="European Storage", mode="lines", line=dict(color="blue")
+        name="Actual Storage", mode="lines", line=dict(color="blue")
     ))
     # 5-Year Range Band (like U.S. method)
     fig.add_trace(go.Scatter(

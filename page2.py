@@ -55,22 +55,22 @@ def load_latest_file(keyword: str, ext=".csv") -> Path | None:
 
 def load_eu_storage() -> pd.DataFrame:
     eur_stor_path = load_latest_file("EUR", ext=".xlsx")
-    df = pd.read_excel(eur_stor_path, sheet_name="Sheet 1", header=10, engine="openpyxl")
-    # Drop empty and non-country rows
-    df = df.dropna(subset=["GEO (Labels)"])
-    df = df[~df["GEO (Labels)"].str.contains("European Union", na=False)]
+    df = pd.read_excel(eur_stor_path, sheet_name="Sheet 1", header=9, skiprows=[10, 11], engine="openpyxl")
+    df.rename(columns={df.columns[0]: "Country"}, inplace=True)
+    df = df[df["Country"].astype(str).str.match("^[A-Za-z -]+$")]
 
-    # Drop non-date columns
-    df_clean = df.drop(columns=["GEO (Labels)"])
-    df_clean = df_clean.apply(pd.to_numeric, errors="coerce") * 0.035314666572
+    # Set index and transpose
+    df.set_index("Country", inplace=True)
+    df_transposed = df.transpose()
+    df_transposed.index.name = "Date"
+    df_transposed.index = pd.to_datetime(df_transposed.index, format="%Y-%m", errors="coerce")
+    df_transposed = df_transposed.dropna(axis=0, how="all")  # Drop rows where all values are NaN
 
-    # Transpose so each row is a date
-    df_transposed = df_clean.T
-    df_transposed.columns = df["GEO (Labels)"].values
-    df_transposed.index = pd.to_datetime(df_transposed.index, errors="coerce")
 
     # Total monthly storage
-    df_transposed["Total"] = df_transposed.sum(axis=1)
+    df_transposed = df_transposed.apply(pd.to_numeric, errors="coerce") * 0.0353147
+    df_transposed["Total"] = df_transposed.sum(axis=1, skipna=True)
+    df_transposed = df_transposed.dropna(subset=["Total"])
 
     # Build a 5-year rolling average + min/max by month
     monthly = df_transposed["Total"].groupby(df_transposed.index.month)
@@ -85,8 +85,11 @@ def load_eu_storage() -> pd.DataFrame:
         "5-Year Avg": avg,
         "5-Year High": high,
         "5-Year Low": low,
-    }).dropna()
+    }).dropna().reset_index(drop=True)
 
+
+    print("Processed Storage:")
+    print(result.tail())
     return result
 
 def clean_pipeline_data(file_path):
@@ -111,6 +114,9 @@ def clean_pipeline_data(file_path):
     df["Last Updated Date"] = pd.to_datetime(df["Last Updated Date"], errors="coerce")
     df["Last Updated Date"] = df["Last Updated Date"].dt.strftime("%-m/%-d/%Y")
     df["Year In Service Date"] = pd.to_numeric(df["Year In Service Date"], errors="coerce").astype("Int64")
+
+    # Filter to keep only rows where 'Demand Served' contains 'LNG' (case-insensitive)
+    df = df[df["Demand Served"].astype(str).str.contains("LNG", case=False, na=False)]
 
     return df
 

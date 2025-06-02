@@ -100,6 +100,7 @@ def clean_imp_exp_data(file_path, sheet_name="By Country Summary"):
 def plot_seasonality(df, activity_type):
     """Generate line chart for imports or exports by year (monthly seasonality)."""
     df_activity = df[df["Activity"] == activity_type].copy()
+    df_activity = df_activity[df_activity["Year"].between(2020, 2025)]
     df_activity["Month"] = df_activity["Transaction Month"].dt.strftime("%b")
     df_activity["Month_Num"] = df_activity["Transaction Month"].dt.month
 
@@ -197,7 +198,7 @@ def plot_region_volume(df):
         df_grouped,
         x="Region",
         y="Volume (MMCF)",
-        title="Exports by Region (Last 12 Months)",
+        title="U.S. Exports To Each Region (Last 12 Months)",
         text="Label"
     )
 

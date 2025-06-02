@@ -4,9 +4,12 @@ from dash import html, dcc, Input, Output, callback
 from pathlib import Path
 import datetime
 import pytz
+import requests
+from bs4 import BeautifulSoup
 
 # Constants
 data_dir = Path(__file__).resolve().parent  # Folder where files are uploaded
+
 
 # Function to load the most recent file containing a specific keyword
 def load_latest_file(keyword: str, ext=".csv") -> Path | None:
@@ -16,15 +19,30 @@ def load_latest_file(keyword: str, ext=".csv") -> Path | None:
     return max(files, key=lambda f: f.stat().st_mtime)
 
 # Function to load and clean Henry Hub Excel data
-def load_henry_hub() -> pd.DataFrame:
-    hh_path = load_latest_file("HenryHub", ext=".xlsx")
-    if hh_path is None:
+def fetch_henry_hub_from_eia():
+    url = "https://api.eia.gov/v2/natural-gas/pri/fut/data/"
+    params = {
+        "frequency": "daily",
+        "data[0]": "value",
+        "start": "2024-06-02",
+        "sort[0][column]": "period",
+        "sort[0][direction]": "desc",
+        "offset": 0,
+        "length": 5000,
+        "api_key": "i5WY2NuBHfTuSPc8K4AbrTHIBRWAuVe9lt6vmXHW"
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()["response"]["data"]
+        df = pd.DataFrame(data)
+        df["Date"] = pd.to_datetime(df["period"])
+        df["Henry Hub"] = pd.to_numeric(df["value"], errors="coerce")
+        return df[["Date", "Henry Hub"]].sort_values("Date")
+    except Exception as e:
+        print(f"Error fetching Henry Hub data: {e}")
         return pd.DataFrame(columns=["Date", "Henry Hub"])
-    df = pd.read_excel(hh_path, sheet_name="Daily", engine="openpyxl")
-    df = df.rename(columns={"observation_date": "Date", "DHHNGSP": "Henry Hub"})
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df["Henry Hub"] = pd.to_numeric(df["Henry Hub"], errors="coerce")
-    return df[["Date", "Henry Hub"]].dropna()
 
 # Function to load and clean JKM CSV data
 def load_jkm() -> pd.DataFrame:
@@ -49,7 +67,7 @@ def load_ttf() -> pd.DataFrame:
 
 # Function to merge all daily benchmark data into a wide-format DataFrame
 def get_benchmark_prices_daily():
-    hh = load_henry_hub()
+    hh = fetch_henry_hub_from_eia()
     jkm = load_jkm()
     ttf = load_ttf()
 

@@ -220,17 +220,49 @@ def plot_region_volume(df):
 
     return fig
 
+def plot_us_exports_by_year(df):
+    """Bar chart of total U.S. exports by year (2016–2025)."""
+    df_exports = df[df["Activity"] == "Exports"].copy()
+    df_grouped = df_exports[df_exports["Year"].between(2016, 2025)].groupby("Year", as_index=False)["Volume (MMCF)"].sum()
+
+    fig = px.bar(
+        df_grouped,
+        x="Year",
+        y="Volume (MMCF)",
+        title="Total U.S. Natural Gas Exports by Year (2016–2025)",
+        text_auto=".2s",
+        labels={"Volume (MMCF)": "Export Volume (MMCF)"}
+    )
+    fig.update_layout(template="plotly_white")
+    fig.update_layout(
+        xaxis_title="Year",
+        yaxis_title="Export Volume (MMCF)",
+        xaxis=dict(
+            tickmode="linear",  # Ensures all years show up
+            tick0=2016,
+            dtick=1
+        )
+    )
+    return fig
+
+
 file_path = download_and_load_file(url)
 df = clean_imp_exp_data(file_path)
 
 # Generate graphs
 fig_monthly = plot_import_export_monthly(df)
 fig_region = plot_region_volume(df)
+fig_exports_yearly = plot_us_exports_by_year(df)
 fig_imports = plot_seasonality(df, activity_type="Imports")
 fig_exports = plot_seasonality(df, activity_type="Exports")
 
 layout = html.Div([
     html.H1("U.S. Natural Gas Imports & Exports", style={"textAlign": "center"}),
+
+    html.Div([
+        html.H2("Annual U.S. Exports (2016–2025)"),
+        dcc.Graph(figure=fig_exports_yearly)
+    ], style={"width": "100%", "padding": "10px"}),
 
     # Top row: Monthly & Regional graphs
     html.Div([

@@ -4,6 +4,7 @@ import page1
 import page2
 import page3
 import page4
+import page5
 
 app = Dash(__name__, suppress_callback_exceptions=True)
 server = app.server
@@ -15,6 +16,7 @@ app.layout = html.Div([
         dcc.Link('Pipelines/Storage', href='/pipelines'),
         dcc.Link('Rig Activity/Production', href='/rigs'),
         dcc.Link('Imports/Exports', href='/lng'),
+        dcc.Link('Storage', href='/storage'),
     ], style={'margin': '20px', 'display': 'flex', 'gap': '20px'}),
     html.Div(id='page-content')
 ])
@@ -29,6 +31,8 @@ def display_page(pathname):
         return page3.layout
     elif pathname == '/lng':
         return page4.layout
+    elif pathname == '/storage':
+        return page5.layout
     else:
         return html.H1("404 - Page Not Found")
 

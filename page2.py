@@ -55,10 +55,10 @@ def load_latest_file(keyword: str, ext=".csv") -> Path | None:
 
 def load_eu_storage() -> pd.DataFrame:
     eur_stor_path = load_latest_file("EUR", ext=".xlsx")
-    df = pd.read_excel(eur_stor_path, sheet_name="Sheet 1", header=7, engine="openpyxl")
+    df = pd.read_excel(eur_stor_path, sheet_name="Sheet 1", header=10, engine="openpyxl")
     # Drop empty and non-country rows
     df = df.dropna(subset=["GEO (Labels)"])
-    df = df[~df["GEO (Labels)"].str.contains("European Union|Total", na=False)]
+    df = df[~df["GEO (Labels)"].str.contains("European Union", na=False)]
 
     # Drop non-date columns
     df_clean = df.drop(columns=["GEO (Labels)"])

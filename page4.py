@@ -256,6 +256,20 @@ fig_exports_yearly = plot_us_exports_by_year(df)
 fig_imports = plot_seasonality(df, activity_type="Imports")
 fig_exports = plot_seasonality(df, activity_type="Exports")
 
+def get_sources(sources):
+    return html.Div([
+        html.Hr(),
+        html.H4("Sources:", style={"marginTop": "20px"}),
+        html.Ul([
+            html.Li(html.A(label, href=link, target="_blank"))
+            for label, link in sources
+        ])
+    ], style={"marginTop": "30px", "marginBottom": "20px"})
+
+page4_sources = [
+    ("Imports & Exports", "https://www.energy.gov/fecm/articles/natural-gas-imports-and-exports-monthly-2025")
+]
+
 layout = html.Div([
     html.H1("U.S. Natural Gas Imports & Exports", style={"textAlign": "center"}),
 
@@ -288,6 +302,7 @@ layout = html.Div([
             html.H2("Monthly Exports by Year"),
             dcc.Graph(figure=fig_exports)
         ], style={"width": "50%", "padding": "10px"})
-    ], style={"display": "flex", "flex-direction": "row", "justify-content": "space-between", "flex-wrap": "nowrap"})
+    ], style={"display": "flex", "flex-direction": "row", "justify-content": "space-between", "flex-wrap": "nowrap"}),
+    get_sources(page4_sources)
 ])
 

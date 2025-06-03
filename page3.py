@@ -223,6 +223,20 @@ fig_production = px.area(
     template="plotly_white"
 )
 
+def get_sources(sources):
+    return html.Div([
+        html.Hr(),
+        html.H4("Sources:", style={"marginTop": "20px"}),
+        html.Ul([
+            html.Li(html.A(label, href=link, target="_blank"))
+            for label, link in sources
+        ])
+    ], style={"marginTop": "30px", "marginBottom": "20px"})
+
+page3_sources = [
+    ("Rig Count", "https://rigcount.bakerhughes.com/na-rig-count"),
+    ("Nat Gas Production", "https://www.eia.gov/outlooks/steo/data.php")
+]
 
 layout = html.Div([
     html.H1("U.S. Natural Gas Rig Count & Production", style={"textAlign": "center", "marginBottom": "10px"}),
@@ -242,6 +256,7 @@ layout = html.Div([
     html.Div([
         html.H3("Monthly Dry Shale Gas Production by Basin"),
         dcc.Graph(figure=fig_production)
-    ], style={"width": "100%", "padding": "10px"})
+    ], style={"width": "100%", "padding": "10px"}),
+    get_sources(page3_sources)
 ])
 

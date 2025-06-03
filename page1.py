@@ -172,6 +172,22 @@ price_table = create_spot_price_table(benchmark_df)
 ttf_spread_table = create_ttf_spread_table(benchmark_df)
 jkm_spread_table = create_jkm_spread_table(benchmark_df)
 
+def get_sources(sources):
+    return html.Div([
+        html.Hr(),
+        html.H4("Sources:", style={"marginTop": "20px"}),
+        html.Ul([
+            html.Li(html.A(label, href=link, target="_blank"))
+            for label, link in sources
+        ])
+    ], style={"marginTop": "30px", "marginBottom": "20px"})
+
+page1_sources = [
+    ("Henry Hub Data", "https://markets.businessinsider.com/commodities/natural-gas-price"),
+    ("JKM Data", "https://www.investing.com/commodities/lng-japan-korea-marker-platts-futures-historical-data"),
+    ("TTF Data", "https://www.investing.com/commodities/dutch-ttf-gas-c1-futures-historical-data"),
+]
+
 layout = html.Div([
     html.H1("LNG Price Inputs", style={"textAlign": "center", "marginBottom": "10px"}),
 
@@ -210,7 +226,8 @@ layout = html.Div([
                 html.Div(jkm_spread_table, style={"display": "flex", "justifyContent": "center"})
             ], style={"flex": "1", "margin": "0 20px", "boxShadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "borderRadius": "8px", "padding": "20px", "backgroundColor": "#fafafa"}),
         ], style={"display": "flex", "justifyContent": "center"})
-    ])
+    ]),
+    get_sources(page1_sources)
 ])
 
 # Dynamic chart update callback

@@ -3,8 +3,6 @@ import requests
 import pandas as pd
 from dash import html, dcc, dash_table, Input, Output
 import plotly.express as px
-import plotly.graph_objects as go
-from pathlib import Path
 
 # update quarterly here under Pipeline Projects: https://www.eia.gov/naturalgas/data.php#imports
 pipeline_url = "https://www.eia.gov/naturalgas/pipelines/EIA-NaturalGasPipelineProjects_Apr2025.xlsx"
@@ -84,7 +82,19 @@ state_options = [{"label": s, "value": s} for s in sorted(pipeline_df["State(s)"
 year_options = [{"label": str(y), "value": str(y)} for y in sorted(pipeline_df["Year In Service Date"].dropna().unique())]
 type_options = [{"label": t, "value": t} for t in sorted(pipeline_df["Project Type"].dropna().unique())]
 
+def get_sources(sources):
+    return html.Div([
+        html.Hr(),
+        html.H4("Sources:", style={"marginTop": "20px"}),
+        html.Ul([
+            html.Li(html.A(label, href=link, target="_blank"))
+            for label, link in sources
+        ])
+    ], style={"marginTop": "30px", "marginBottom": "20px"})
 
+page2_sources = [
+    ("Pipeline Projects", "https://www.eia.gov/naturalgas/data.php")
+]
 
 layout = html.Div([
     html.H1("U.S. Natural Gas Pipeline Projects", style={"textAlign": "center"}),
@@ -117,7 +127,8 @@ layout = html.Div([
         style_cell={"textAlign": "left", "whiteSpace": "normal", "minWidth": "120px"},
         filter_action="native",
         sort_action="native"
-    )
+    ),
+    get_sources(page2_sources)
 ])
 
 def register_callbacks(app):

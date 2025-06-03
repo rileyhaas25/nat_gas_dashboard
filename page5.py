@@ -1,8 +1,7 @@
 import os
 import requests
 import pandas as pd
-from dash import html, dcc, dash_table, Input, Output
-import plotly.express as px
+from dash import html, dcc
 import plotly.graph_objects as go
 from pathlib import Path
 
@@ -165,10 +164,26 @@ storage_figure = create_storage_figure(storage_df)
 eu_storage_df = load_eu_storage()
 eu_storage_fig = create_eu_storage_chart(eu_storage_df)
 
+def get_sources(sources):
+    return html.Div([
+        html.Hr(),
+        html.H4("Sources:", style={"marginTop": "20px"}),
+        html.Ul([
+            html.Li(html.A(label, href=link, target="_blank"))
+            for label, link in sources
+        ])
+    ], style={"marginTop": "30px", "marginBottom": "20px"})
+
+page5_sources = [
+    ("US Nat Gas Storage", "https://www.eia.gov/outlooks/steo/data.php"),
+    ("EU Nat Gas Storage", "https://ec.europa.eu/eurostat/databrowser/view/nrg_stk_gasm__custom_16946737/default/table?lang=en")
+]
+
 layout = html.Div([
     html.H1("Natural Gas Storage Levels", style={"textAlign": "center"}),
     html.H2("U.S. Natural Gas Storage Data"),
     dcc.Graph(figure=storage_figure),
     html.H2("European Natural Gas Storage Data"),
-    dcc.Graph(figure=eu_storage_fig)
+    dcc.Graph(figure=eu_storage_fig),
+    get_sources(page5_sources)
 ])

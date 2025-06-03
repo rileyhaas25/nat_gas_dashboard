@@ -13,7 +13,7 @@ app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div([
         dcc.Link('Pricing', href='/'),
-        dcc.Link('Pipelines/LNG Capacity', href='/pipelines'),
+        dcc.Link('LNG Related Pipeline Capacity', href='/pipelines'),
         dcc.Link('Rig Activity/Production', href='/rigs'),
         dcc.Link('Imports/Exports', href='/lng'),
         dcc.Link('Storage', href='/storage'),

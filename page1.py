@@ -96,15 +96,14 @@ def create_spot_price_table(df: pd.DataFrame):
 def create_ttf_spread_table(df: pd.DataFrame):
     latest = df.sort_values("Date", ascending=False).iloc[0]
     hh = latest["Henry Hub"]
+    print(hh)
     ttf = latest["TTF (USD)"]
     spread = ttf - hh
     shipping = 0.70
     regas = 0.35
     liquefaction = 2.75
-    var_costs = (hh * 1.15) + shipping + regas
-    spread_less_var = spread - var_costs
-    all_in_costs = var_costs + liquefaction
-    spread_less_all_in = spread - all_in_costs
+    spread_less_var = (hh * 1.15) - shipping - regas
+    spread_less_all_in = spread_less_var - liquefaction
     return dash_table.DataTable(
         columns=[
             {"name": "TTF Spread", "id": "spread"},
@@ -129,15 +128,13 @@ def create_jkm_spread_table(df: pd.DataFrame):
     shipping = 2.20
     regas = 0.50
     liquefaction = 2.75
-    var_costs = (hh * 1.15) + shipping + regas
-    spread_less_var = spread - var_costs
-    all_in_costs = var_costs + liquefaction
-    spread_less_all_in = spread - all_in_costs
+    spread_less_var = (hh * 1.15) - shipping - regas
+    spread_less_all_in = spread_less_var - liquefaction
     return dash_table.DataTable(
         columns=[
             {"name": "JKM Spread", "id": "spread"},
-            {"name": "Spread less Variable Costs", "id": "variable_cost"},
-            {"name": "Spread less All-In Costs", "id": "all_in_cost"}
+            {"name": "Spread Less Variable Costs", "id": "variable_cost"},
+            {"name": "Spread Less All-In Costs", "id": "all_in_cost"}
         ],
         data=[{
             "spread": f"${spread:.2f}",

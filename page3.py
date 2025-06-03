@@ -225,7 +225,7 @@ fig_production = px.area(
 
 
 layout = html.Div([
-    html.H1("U.S. Natural Gas Rig Count & Production"),
+    html.H1("U.S. Natural Gas Rig Count & Production", style={"textAlign": "center", "marginBottom": "10px"}),
 
     html.Div([
         html.Div([

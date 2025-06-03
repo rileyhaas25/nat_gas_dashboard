@@ -98,17 +98,18 @@ def create_ttf_spread_table(df: pd.DataFrame):
     hh = latest["Henry Hub"]
     print(hh)
     ttf = latest["TTF (USD)"]
+    print(ttf)
     spread = ttf - hh
     shipping = 0.70
     regas = 0.35
     liquefaction = 2.75
-    spread_less_var = ttf - ((hh * 1.15) - shipping - regas)
-    spread_less_all_in = ttf - (spread_less_var - liquefaction)
+    spread_less_var = ttf - (hh * 1.15) - shipping - regas
+    spread_less_all_in = ttf - (hh * 1.15) - shipping - regas - liquefaction
     return dash_table.DataTable(
         columns=[
             {"name": "TTF Spread", "id": "spread"},
-            {"name": "TTF less Variable Costs", "id": "variable_cost"},
-            {"name": "TTF less All-In Costs", "id": "all_in_cost"}
+            {"name": "Spread less Variable Costs", "id": "variable_cost"},
+            {"name": "Spread less All-In Costs", "id": "all_in_cost"}
         ],
         data=[{
             "spread": f"${spread:.2f}",
@@ -124,17 +125,18 @@ def create_jkm_spread_table(df: pd.DataFrame):
     latest = df.sort_values("Date", ascending=False).iloc[0]
     hh = latest["Henry Hub"]
     jkm = latest["JKM"]
+    print(jkm)
     spread = jkm - hh
     shipping = 2.20
     regas = 0.50
     liquefaction = 2.75
-    spread_less_var = jkm - ((hh * 1.15) - shipping - regas)
-    spread_less_all_in = jkm - (spread_less_var - liquefaction)
+    spread_less_var = jkm - (hh * 1.15) - shipping - regas
+    spread_less_all_in = jkm - (hh * 1.15) - shipping - regas - liquefaction
     return dash_table.DataTable(
         columns=[
             {"name": "JKM Spread", "id": "spread"},
-            {"name": "JKM Less Variable Costs", "id": "variable_cost"},
-            {"name": "JKM Less All-In Costs", "id": "all_in_cost"}
+            {"name": "Spread Less Variable Costs", "id": "variable_cost"},
+            {"name": "Spread Less All-In Costs", "id": "all_in_cost"}
         ],
         data=[{
             "spread": f"${spread:.2f}",

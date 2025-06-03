@@ -135,7 +135,7 @@ def create_jkm_spread_table(df: pd.DataFrame):
     spread_less_all_in = spread - all_in_costs
     return dash_table.DataTable(
         columns=[
-            {"name": "TTF Spread", "id": "spread"},
+            {"name": "JKM Spread", "id": "spread"},
             {"name": "Spread less Variable Costs", "id": "variable_cost"},
             {"name": "Spread less All-In Costs", "id": "all_in_cost"}
         ],

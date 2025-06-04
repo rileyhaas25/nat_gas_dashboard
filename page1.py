@@ -191,8 +191,6 @@ page1_sources = [
 layout = html.Div([
     html.H1("LNG Price Inputs", style={"textAlign": "center", "marginBottom": "10px"}),
 
-    html.H2("Natural Gas Daily Benchmark Prices", style={"textAlign": "left", "marginTop": "0px", "marginLeft": "20px"}),
-
     dcc.Interval(id="interval", interval=60 * 1000, n_intervals=0),
 
     dcc.Graph(id="benchmark-chart", figure=price_chart),

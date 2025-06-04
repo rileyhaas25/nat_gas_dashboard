@@ -119,7 +119,6 @@ def create_storage_figure(df):
         line=dict(color="green", dash="dash")
     ))
     fig.update_layout(
-        title="U.S. Natural Gas Storage vs. 5-Year Range",
         xaxis_title="Year",
         yaxis_title="Storage (Bcf)",
         template="plotly_white",
@@ -151,7 +150,6 @@ def create_eu_storage_chart(df):
         name="5-Year Avg", mode="lines", line=dict(color="black", dash="dash")
     ))
     fig.update_layout(
-        title="European Natural Gas Storage vs. 5-Year Range",
         template="plotly_white",
         yaxis_title="Storage (Bcf)",
         xaxis_title="Year"

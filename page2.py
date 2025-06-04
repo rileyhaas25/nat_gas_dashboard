@@ -73,7 +73,6 @@ def supply_area_chart(df):
         x="Year",
         y="MTPA",
         color="Country",
-        title="Global LNG Supply by Country/Region",
         labels={"MTPA": "Supply (MTPA)", "Country": "Region/Country"}
     )
     fig.update_layout(template="plotly_white", xaxis_title="Year", yaxis_title="Cumulative Supply", xaxis_type="category")
@@ -102,7 +101,6 @@ def demand_area_chart(df):
         x="Year",
         y="MTPA",
         color="Country",
-        title="Global LNG Demand by Country/Region",
         labels={"MTPA": "Demand (MTPA)", "Country": "Region/Country"}
     )
     fig.update_layout(template="plotly_white", xaxis_title="Year", yaxis_title="Cumulative Demand", xaxis_type="category")
@@ -127,8 +125,7 @@ def us_production_chart(df):
         yearly_cumulative,
         x=yearly_cumulative["Year"].astype(int).astype(str),
         y="Cumulative MTPA",
-        text="Cumulative MTPA",
-        title="Total U.S. LNG Production by Year (Online & Under Construction)",
+        text="Cumulative MTPA"
     )
 
     fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
@@ -164,8 +161,7 @@ def qatar_production_chart(df):
         yearly_cumulative,
         x=yearly_cumulative["Year"].astype(int).astype(str),
         y="Cumulative MTPA",
-        text="Cumulative MTPA",
-        title="Total Qatar LNG Production by Year (Online & Under Construction)",
+        text="Cumulative MTPA"
     )
 
     fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
@@ -215,17 +211,17 @@ layout = html.Div([
 
     html.Div([
         html.Div([
-            html.H2("U.S. LNG Production by Year"),
+            html.H3("U.S. LNG Production by Year"),
             dcc.Graph(figure=us_graph)
         ], style={"width": "50%", "padding": "10px"}),
 
         html.Div([
-            html.H2("Qatar LNG Production by Year"),
+            html.H3("Qatar LNG Production by Year"),
             dcc.Graph(figure=qatar_graph)
         ], style={"width": "50%", "padding": "10px"})
     ], style={"display": "flex", "flexDirection": "row", "justifyContent": "space-between"}),
 
-    html.H2("LNG Project Tracker"),
+    html.H2("LNG Project Tracker", style={"textAlign": "center"}),
     html.Div([
         html.Div([
             html.Label("Filter by Status:"),
@@ -255,7 +251,7 @@ layout = html.Div([
         sort_action="native"
     ),
     html.Div([
-            html.H2("Global LNG Supply & Demand"),
+            html.H2("Global LNG Supply & Demand", style={"textAlign": "center"}),
 
             html.Div([
                 html.Div([

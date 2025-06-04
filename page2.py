@@ -1,86 +1,109 @@
-import os
-import requests
 import pandas as pd
 from dash import html, dcc, dash_table, Input, Output
 import plotly.express as px
+from pathlib import Path
 
-# update quarterly here under Pipeline Projects: https://www.eia.gov/naturalgas/data.php#imports
-pipeline_url = "https://www.eia.gov/naturalgas/pipelines/EIA-NaturalGasPipelineProjects_Apr2025.xlsx"
+data_dir = Path(__file__).resolve().parent
 
-def download_pipeline_excel(url, save_dir=None, filename="pipeline_projects.xlsx"):
-    if save_dir is None:
-        save_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-    os.makedirs(save_dir, exist_ok=True)
+def load_latest_file(keyword: str, ext=".xlsx") -> Path | None:
+    files = list(data_dir.glob(f"*{keyword}*{ext}"))
+    if not files:
+        return None
+    return max(files, key=lambda f: f.stat().st_mtime)
 
-    full_path = os.path.join(save_dir, filename)
-
-    response = requests.get(url)
-    response.raise_for_status()
-
-    with open(full_path, "wb") as f:
-        f.write(response.content)
-
-    print(f"Downloaded to: {full_path}")
-    return full_path
-
-
-def clean_pipeline_data(file_path):
-    # Load from row 2 (zero-indexed row 1) as header
-    df = pd.read_excel(
-        file_path,
-        sheet_name="Natural Gas Pipeline Projects",
-        header=1,  # Row 2 in Excel = header row (0-indexed)
-        engine="openpyxl"
-    )
-    # Only keep the specified columns
-    keep_cols = [
-        "Last Updated Date", "Project Name", "Pipeline Operator Name", "Project Type",
-        "Status", "Year In Service Date", "State(s)", "Additional Capacity (MMcf/d)", "Notes", "Demand Served"
-    ]
-    df = df[keep_cols]
-    # Drop fully empty rows and reset index
-    df.dropna(how="all", inplace=True)
-    df.reset_index(drop=True, inplace=True)
-
-    # Convert dates
-    df["Last Updated Date"] = pd.to_datetime(df["Last Updated Date"], errors="coerce")
-    df["Last Updated Date"] = df["Last Updated Date"].dt.strftime("%-m/%-d/%Y")
-    df["Year In Service Date"] = pd.to_numeric(df["Year In Service Date"], errors="coerce").astype("Int64")
-
-    # Filter to keep only rows where 'Demand Served' contains 'LNG' (case-insensitive)
-    df = df[df["Demand Served"].astype(str).str.contains("LNG", case=False, na=False)]
-
+def load_pipeline_data() -> pd.DataFrame:
+    file_path = load_latest_file("LNG_Production")
+    if file_path is None:
+        raise FileNotFoundError("No LNG Production Excel file found in the data directory.")
+    df = pd.read_excel(file_path)
+    df["First Cargo"] = pd.to_datetime(df["First Cargo"], errors="coerce")
+    df["Year"] = df["First Cargo"].dt.year
+    df = df.drop(columns=["Last Updated"], errors="ignore")
+    df = df.dropna(how="all").reset_index(drop=True)
     return df
 
-def create_capacity_by_year_chart(df):
-    cap_df = df.dropna(subset=["Year In Service Date", "Additional Capacity (MMcf/d)"])
-    grouped = cap_df.groupby("Year In Service Date")["Additional Capacity (MMcf/d)"].sum().reset_index()
+def us_production_chart(df):
+    df_us = df[
+        (df["Country"] == "United States") &
+        (df["Status"].isin(["Online", "Under Construction"]))
+        ].copy()
+    yearly_cumulative = (
+        df_us.groupby("Year")["MTPA"]
+        .sum()
+        .sort_index()
+        .cumsum()
+        .reset_index()
+        .rename(columns={"MTPA": "Cumulative MTPA"})
+    )
 
     fig = px.bar(
-        grouped,
-        x="Year In Service Date",
-        y="Additional Capacity (MMcf/d)",
-        labels={
-            "Year In Service Date": "Year",
-            "Additional Capacity (MMcf/d)": "Capacity (MMcf/d)"
-        },
-        title="Planned Pipeline Capacity Additions by Year",
-        text_auto=".2s",
-        template="plotly_white"
+        yearly_cumulative,
+        x=yearly_cumulative["Year"].astype(int).astype(str),
+        y="Cumulative MTPA",
+        text="Cumulative MTPA",
+        title="Total U.S. LNG Production by Year (Online & Under Construction)",
     )
+
+    fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
+    fig.update_layout(xaxis_type='category', xaxis_tickformat=',d')
+    fig.update_layout(
+        template="plotly_white",
+        xaxis_title="Year",
+        yaxis_title="Capacity (MTPA)",
+        uniformtext_minsize=8,
+        uniformtext_mode="hide",
+    )
+
+    max_y = yearly_cumulative["Cumulative MTPA"].max()
+    fig.update_yaxes(range=[0, max_y * 1.1])
+
     return fig
 
+def qatar_production_chart(df):
+    df_qatar = df[
+        (df["Country"] == "Qatar") &
+        (df["Status"].isin(["Online", "Under Construction"]))
+        ].copy()
+    yearly_cumulative = (
+        df_qatar.groupby("Year")["MTPA"]
+        .sum()
+        .sort_index()
+        .cumsum()
+        .reset_index()
+        .rename(columns={"MTPA": "Cumulative MTPA"})
+    )
 
-pipeline_file_path = download_pipeline_excel(pipeline_url)
-pipeline_df = clean_pipeline_data(pipeline_file_path)
-capacity_chart = create_capacity_by_year_chart(pipeline_df)
+    fig = px.bar(
+        yearly_cumulative,
+        x=yearly_cumulative["Year"].astype(int).astype(str),
+        y="Cumulative MTPA",
+        text="Cumulative MTPA",
+        title="Total Qatar LNG Production by Year (Online & Under Construction)",
+    )
+
+    fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
+    fig.update_layout(xaxis_type='category', xaxis_tickformat=',d')
+    fig.update_layout(
+        template="plotly_white",
+        xaxis_title="Year",
+        yaxis_title="Capacity (MTPA)",
+        uniformtext_minsize=8,
+        uniformtext_mode="hide",
+    )
+    max_y = yearly_cumulative["Cumulative MTPA"].max()
+    fig.update_yaxes(range=[0, max_y * 1.1])
+
+    return fig
+
+pipeline_df = load_pipeline_data()
+us_graph = us_production_chart(pipeline_df)
+qatar_graph = qatar_production_chart(pipeline_df)
 
 
 # Create dropdown options
 status_options = [{"label": s, "value": s} for s in sorted(pipeline_df["Status"].dropna().unique())]
-state_options = [{"label": s, "value": s} for s in sorted(pipeline_df["State(s)"].dropna().unique())]
-year_options = [{"label": str(y), "value": str(y)} for y in sorted(pipeline_df["Year In Service Date"].dropna().unique())]
-type_options = [{"label": t, "value": t} for t in sorted(pipeline_df["Project Type"].dropna().unique())]
+country_options = [{"label": s, "value": s} for s in sorted(pipeline_df["Country"].dropna().unique())]
+year_options = [{"label": str(y), "value": str(y)} for y in sorted(pipeline_df["Year"].dropna().unique())]
 
 def get_sources(sources):
     return html.Div([
@@ -93,29 +116,41 @@ def get_sources(sources):
     ], style={"marginTop": "30px", "marginBottom": "20px"})
 
 page2_sources = [
-    ("Pipeline Projects", "https://www.eia.gov/naturalgas/data.php")
+    ("Pipeline Projects", "https://www.respectmyplanet.org/publications/international/rmps-international-lng-map-10th-anniversary-upgrade-with-report")
 ]
 
 layout = html.Div([
-    html.H1("U.S. Natural Gas Pipeline Projects", style={"textAlign": "center"}),
+    html.H1("LNG Projects & Capacity", style={"textAlign": "center"}),
 
-    html.H2("Pipeline Capacity Additions"),
-    dcc.Graph(figure=capacity_chart),
-
-    html.H2("U.S. Pipeline Projects"),
     html.Div([
-        html.Label("Filter by Status:"),
-        dcc.Dropdown(options=status_options, id="status-filter", multi=True),
+        html.Div([
+            html.H2("U.S. LNG Production by Year"),
+            dcc.Graph(figure=us_graph)
+        ], style={"width": "50%", "padding": "10px"}),
 
-        html.Label("Filter by State(s):"),
-        dcc.Dropdown(options=state_options, id="state-filter", multi=True),
+        html.Div([
+            html.H2("Qatar LNG Production by Year"),
+            dcc.Graph(figure=qatar_graph)
+        ], style={"width": "50%", "padding": "10px"})
+    ], style={"display": "flex", "flexDirection": "row", "justifyContent": "space-between"}),
 
-        html.Label("Filter by Year In Service:"),
-        dcc.Dropdown(options=year_options, id="year-filter", multi=True),
+    html.H2("LNG Project Tracker"),
+    html.Div([
+        html.Div([
+            html.Label("Filter by Status:"),
+            dcc.Dropdown(options=status_options, id="status-filter", multi=True),
+        ], style={"marginBottom": "20px"}),
 
-        html.Label("Filter by Project Type:"),
-        dcc.Dropdown(options=type_options, id="type-filter", multi=True),
-    ], style={"columnCount": 2, "marginBottom": "20px"}),
+        html.Div([
+            html.Label("Filter by Year of First Cargo:"),
+            dcc.Dropdown(options=year_options, id="year-filter", multi=True),
+        ], style={"marginBottom": "20px"}),
+
+        html.Div([
+            html.Label("Filter by Country:"),
+            dcc.Dropdown(options=country_options, id="country-filter", multi=True),
+        ], style={"marginBottom": "20px"}),
+    ], style={"width": "60%", "margin": "auto"}),
 
     dash_table.DataTable(
         id="pipeline-table",
@@ -135,20 +170,17 @@ def register_callbacks(app):
     @app.callback(
         Output("pipeline-table", "data"),
         Input("status-filter", "value"),
-        Input("state-filter", "value"),
-        Input("year-filter", "value"),
-        Input("type-filter", "value")
+        Input("country-filter", "value"),
+        Input("year-filter", "value")
     )
-    def update_table(status, states, years, types):
+    def update_table(status, countries, years):
         dff = pipeline_df.copy()
         if status:
             dff = dff[dff["Status"].isin(status)]
-        if states:
-            dff = dff[dff["State(s)"].isin(states)]
+        if countries:
+            dff = dff[dff["Country"].isin(countries)]
         if years:
-            dff = dff[dff["Year In Service Date"].astype(str).isin(years)]
-        if types:
-            dff = dff[dff["Project Type"].isin(types)]
+            dff = dff[dff["Year"].astype(str).isin(years)]
         return dff.to_dict("records")
 
 

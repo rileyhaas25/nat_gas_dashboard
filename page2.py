@@ -22,6 +22,93 @@ def load_pipeline_data() -> pd.DataFrame:
     df = df.dropna(how="all").reset_index(drop=True)
     return df
 
+def extract_section(df, start_row, end_row, category):
+    year_headers = df.iloc[5, 2:19].values
+    section = df.iloc[start_row:end_row, :]
+    section = section.reset_index(drop=True)
+
+    countries = section.iloc[:, 1].values  # Column B has country names
+    data = section.iloc[:, 2:19]             # Columns C onward have values
+    data.columns = year_headers            # Set year headers
+    data.insert(0, "Country", countries)
+    data.insert(0, "Category", category)
+
+    return data
+
+def load_balance_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+    file_path = load_latest_file("Global_LNG")
+    sheet_name = "Global LNG Balance"
+    if file_path is None:
+        raise FileNotFoundError("No LNG Balance Excel file found in the data directory.")
+
+    df = pd.read_excel(file_path, sheet_name=sheet_name, header=None, engine="openpyxl")
+
+    africa = ["Nigeria", "Mozambique"]
+    asia_pacific = ["Australia", "Malaysia", "Indonesia"]
+    df_supply = extract_section(df, start_row=6, end_row=18, category="Supply")
+    df_supply["Country"] = df_supply["Country"].replace(
+        {c: "Africa" for c in africa} | {c: "Asia-Pacific" for c in asia_pacific}
+    )
+    df_supply = df_supply.dropna(subset=["Country"])
+    df_demand = extract_section(df, start_row=20, end_row=33, category="Demand")
+    df_demand = df_demand.dropna(subset=["Country"])
+    return df_supply, df_demand
+
+def clean_year_label(val):
+    val_str = str(val)
+    if val_str.endswith('E'):
+        return val_str  # leave forecast years like '2030E' untouched
+    try:
+        return str(int(float(val)))  # convert 2020.0 → '2020'
+    except:
+        return val_str  # fallback just in case
+
+def supply_area_chart(df):
+    year_cols = [col for col in df.columns if str(col).startswith("20")]
+    df_grouped = df.groupby("Country")[year_cols].sum().reset_index()
+    df_long = df_grouped.melt(id_vars="Country", var_name="Year", value_name="MTPA")
+    df_long["Year"] = df_long["Year"].apply(clean_year_label)
+    fig = px.area(
+        df_long,
+        x="Year",
+        y="MTPA",
+        color="Country",
+        title="Global LNG Supply by Country/Region",
+        labels={"MTPA": "Supply (MTPA)", "Country": "Region/Country"}
+    )
+    fig.update_layout(template="plotly_white", xaxis_title="Year", yaxis_title="Cumulative Supply", xaxis_type="category")
+
+    return fig
+
+def demand_area_chart(df):
+    year_cols = [col for col in df.columns if isinstance(col, (int, float)) or str(col).endswith("E")]
+    asia_row = df[df["Country"] == "Asia"].copy()
+    china_row = df[df["Country"] == "Mainland China"].copy()
+    asia_ex_china = asia_row.copy()
+    for col in year_cols:
+        asia_ex_china[col] = asia_row[col].values - china_row[col].values
+    asia_ex_china["Country"] = "Asia (ex-China)"
+    to_drop = ["Japan", "South Korea", "India", "Taiwan", "Pak-Ban", "SE Asia", "Asia"]
+    df = df[~df["Country"].isin(to_drop)]
+    df = pd.concat([df, asia_ex_china], ignore_index=True)
+    df_long = df.melt(id_vars=["Country"], value_vars=year_cols,
+                             var_name="Year", value_name="MTPA")
+
+    # Convert year column to string/int for clean x-axis
+    df_long["Year"] = df_long["Year"].apply(clean_year_label)
+
+    fig = px.area(
+        df_long,
+        x="Year",
+        y="MTPA",
+        color="Country",
+        title="Global LNG Demand by Country/Region",
+        labels={"MTPA": "Demand (MTPA)", "Country": "Region/Country"}
+    )
+    fig.update_layout(template="plotly_white", xaxis_title="Year", yaxis_title="Cumulative Demand", xaxis_type="category")
+
+    return fig
+
 def us_production_chart(df):
     df_us = df[
         (df["Country"] == "United States") &
@@ -99,6 +186,9 @@ pipeline_df = load_pipeline_data()
 us_graph = us_production_chart(pipeline_df)
 qatar_graph = qatar_production_chart(pipeline_df)
 
+df_supply, df_demand = load_balance_data()
+lng_supply = supply_area_chart(df_supply)
+lng_demand = demand_area_chart(df_demand)
 
 # Create dropdown options
 status_options = [{"label": s, "value": s} for s in sorted(pipeline_df["Status"].dropna().unique())]
@@ -116,7 +206,8 @@ def get_sources(sources):
     ], style={"marginTop": "30px", "marginBottom": "20px"})
 
 page2_sources = [
-    ("Pipeline Projects", "https://www.respectmyplanet.org/publications/international/rmps-international-lng-map-10th-anniversary-upgrade-with-report")
+    ("Pipeline Projects", "https://www.respectmyplanet.org/publications/international/rmps-international-lng-map-10th-anniversary-upgrade-with-report"),
+    ("Global LNG Supply & Demand", "https://marquee.gs.com/content/research/authors/15b3f07d-5914-4e9c-80ad-26811164a1c5.html")
 ]
 
 layout = html.Div([
@@ -163,6 +254,21 @@ layout = html.Div([
         filter_action="native",
         sort_action="native"
     ),
+    html.Div([
+            html.H2("Global LNG Supply & Demand"),
+
+            html.Div([
+                html.Div([
+                    html.H3("Global LNG Supply by Country/Region"),
+                    dcc.Graph(figure=lng_supply)
+                ], style={"width": "50%", "padding": "10px"}),
+
+                html.Div([
+                    html.H3("Global LNG Demand by Region"),
+                    dcc.Graph(figure=lng_demand)
+                ], style={"width": "50%", "padding": "10px"})
+            ], style={"display": "flex", "flexDirection": "row", "justifyContent": "space-between"})
+    ]),
     get_sources(page2_sources)
 ])
 

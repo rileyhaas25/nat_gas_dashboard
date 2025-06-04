@@ -20,6 +20,7 @@ def load_pipeline_data() -> pd.DataFrame:
     df["Year"] = df["First Cargo"].dt.year
     df = df.drop(columns=["Last Updated"], errors="ignore")
     df = df.dropna(how="all").reset_index(drop=True)
+    df["Year"] = df["First Cargo"].dt.year.fillna(2031)
     return df
 
 def extract_section(df, start_row, end_row, category):

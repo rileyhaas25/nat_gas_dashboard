@@ -19,7 +19,6 @@ def download_and_load_file(url, save_dir=None, filename='import_and_exports.xlsx
     with open(full_path, 'wb') as f:
         f.write(response.content)
 
-    print(f"Downloaded Excel file to: {full_path}")
     return full_path
 
 def clean_imp_exp_data(file_path, sheet_name="By Country Summary"):
@@ -97,46 +96,6 @@ def clean_imp_exp_data(file_path, sheet_name="By Country Summary"):
     df_filtered.loc[:, "Region"] = df_filtered["Region"].fillna("Other")
     return df_filtered
 
-def plot_seasonality(df, activity_type):
-    """Generate line chart for imports or exports by year (monthly seasonality)."""
-    df_activity = df[df["Activity"] == activity_type].copy()
-    df_activity = df_activity[df_activity["Year"].between(2020, 2025)]
-    df_activity["Month"] = df_activity["Transaction Month"].dt.strftime("%b")
-    df_activity["Month_Num"] = df_activity["Transaction Month"].dt.month
-
-    df_grouped = (
-        df_activity.groupby(["Year", "Month", "Month_Num"], as_index=False)["Volume (MMCF)"]
-        .sum()
-    )
-
-    df_grouped.sort_values(["Month_Num", "Year"], inplace=True)
-
-    df_grouped["Year"] = pd.Categorical(df_grouped["Year"], ordered=True,
-                                        categories=sorted(df_grouped["Year"].unique()))
-
-    fig = px.line(
-        df_grouped,
-        x="Month",
-        y="Volume (MMCF)",
-        color="Year",
-        title=f"{activity_type} by Month and Year (Seasonality View)",
-        markers=True
-    )
-    fig.update_layout(
-        xaxis_title="Month",
-        yaxis_title="Volume (MMCF)",
-        template="plotly_white",
-        legend=dict(
-            title="Year",
-            orientation="v",  # vertical
-            x=1.05,  # outside to the right
-            y=0.5,
-            xanchor="left",
-            yanchor="middle"
-        )
-    )
-    return fig
-
 def get_last_12_months_data(df):
     latest_date = df["Transaction Month"].max()
     start_date = latest_date - pd.DateOffset(months=12)
@@ -155,8 +114,7 @@ def plot_import_export_monthly(df):
         x="Month",
         y="Volume (MMCF)",
         color="Activity",
-        barmode="group",
-        title="Monthly Imports vs Exports (Last 12 Months)"
+        barmode="group"
     )
     fig.update_layout(
         template="plotly_white",
@@ -198,7 +156,6 @@ def plot_region_volume(df):
         df_grouped,
         x="Region",
         y="Volume (MMCF)",
-        title="U.S. Exports To Each Region (Last 12 Months)",
         text="Label"
     )
 
@@ -229,7 +186,6 @@ def plot_us_exports_by_year(df):
         df_grouped,
         x="Year",
         y="Volume (MMCF)",
-        title="Total U.S. Natural Gas Exports by Year (2016–2025)",
         text_auto=".2s",
         labels={"Volume (MMCF)": "Export Volume (MMCF)"}
     )
@@ -245,6 +201,21 @@ def plot_us_exports_by_year(df):
     )
     return fig
 
+def exports_eur_asia(df):
+    df = df[df["Year"] >= 2021]
+    df_exports = df[df["Activity"] == "Exports"]
+    df_region = df_exports[df_exports["Region"].isin(["Europe", "Asia"])]
+    df_grouped = df_region.groupby([df_region["Transaction Month"], "Region"], as_index=False)["Volume (MMCF)"].sum()
+
+    fig = px.line(
+        df_grouped,
+        x="Transaction Month",
+        y="Volume (MMCF)",
+        color="Region"
+    )
+    fig.update_layout(template="plotly_white", xaxis_title="Date", yaxis_title="Export Volume (MMCF)", showlegend=True)
+
+    return fig
 
 file_path = download_and_load_file(url)
 df = clean_imp_exp_data(file_path)
@@ -253,8 +224,7 @@ df = clean_imp_exp_data(file_path)
 fig_monthly = plot_import_export_monthly(df)
 fig_region = plot_region_volume(df)
 fig_exports_yearly = plot_us_exports_by_year(df)
-fig_imports = plot_seasonality(df, activity_type="Imports")
-fig_exports = plot_seasonality(df, activity_type="Exports")
+eur_vs_asia = exports_eur_asia(df)
 
 def get_sources(sources):
     return html.Div([
@@ -274,35 +244,28 @@ layout = html.Div([
     html.H1("U.S. Natural Gas Imports & Exports", style={"textAlign": "center"}),
 
     html.Div([
-        html.H2("Annual U.S. Exports (2016–2025)"),
+        html.H3("Annual U.S. Exports"),
         dcc.Graph(figure=fig_exports_yearly)
     ], style={"width": "100%", "padding": "10px"}),
 
     # Top row: Monthly & Regional graphs
     html.Div([
         html.Div([
-            html.H2("Monthly Imports vs Exports"),
+            html.H3("Monthly Imports vs Exports (LTM)"),
             dcc.Graph(figure=fig_monthly)
-        ], style={"width": "50%", "padding": "10px"}),
+        ], style={"width": "32%", "padding": "10px"}),
 
         html.Div([
-            html.H2("Trade Volume by Region"),
+            html.H3("U.S. Exports by Region"),
             dcc.Graph(figure=fig_region)
-        ], style={"width": "50%", "padding": "10px"})
-    ], style={"display": "flex", "flex-direction": "row", "justify-content": "space-between", "flex-wrap": "nowrap"}),
-
-    # Bottom row: Seasonality graphs
-    html.Div([
-        html.Div([
-            html.H2("Monthly Imports by Year"),
-            dcc.Graph(figure=fig_imports)
-        ], style={"width": "50%", "padding": "10px"}),
+        ], style={"width": "32%", "padding": "10px"}),
 
         html.Div([
-            html.H2("Monthly Exports by Year"),
-            dcc.Graph(figure=fig_exports)
-        ], style={"width": "50%", "padding": "10px"})
+            html.H3("U.S. Exports to Europe vs Asia"),
+            dcc.Graph(figure=eur_vs_asia)  # ← your new figure
+        ], style={"width": "32%", "padding": "10px"}),
     ], style={"display": "flex", "flex-direction": "row", "justify-content": "space-between", "flex-wrap": "nowrap"}),
+
     get_sources(page4_sources)
 ])
 

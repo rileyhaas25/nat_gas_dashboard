@@ -24,7 +24,6 @@ def download_and_load_rig(url, save_dir=None, filename='baker_hughes_rig_count.x
     with open(full_path, 'wb') as f:
         f.write(response.content)
 
-    print(f"Downloaded Excel file to: {full_path}")
     return full_path
 
 def download_and_load_production(url, save_dir=None, filename='dry_shale_gas_production_by_formation.xlsx'):
@@ -39,7 +38,6 @@ def download_and_load_production(url, save_dir=None, filename='dry_shale_gas_pro
     with open(full_path, 'wb') as f:
         f.write(response.content)
 
-    print(f"Downloaded Excel file to: {full_path}")
     return full_path
 
 def clean_rig_count_data(file_path, sheet_name="NAM Weekly"):

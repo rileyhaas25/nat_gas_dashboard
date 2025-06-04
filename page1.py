@@ -51,7 +51,6 @@ def load_ttf() -> pd.DataFrame:
 # Function to merge all daily benchmark data into a wide-format DataFrame
 def get_benchmark_prices_daily():
     hh = load_henry_hub()
-    print(hh.head(10))
     jkm = load_jkm()
     ttf = load_ttf()
 
@@ -96,9 +95,7 @@ def create_spot_price_table(df: pd.DataFrame):
 def create_ttf_spread_table(df: pd.DataFrame):
     latest = df.sort_values("Date", ascending=False).iloc[0]
     hh = latest["Henry Hub"]
-    print(hh)
     ttf = latest["TTF (USD)"]
-    print(ttf)
     spread = ttf - hh
     shipping = 0.70
     regas = 0.35
@@ -125,7 +122,6 @@ def create_jkm_spread_table(df: pd.DataFrame):
     latest = df.sort_values("Date", ascending=False).iloc[0]
     hh = latest["Henry Hub"]
     jkm = latest["JKM"]
-    print(jkm)
     spread = jkm - hh
     shipping = 2.20
     regas = 0.50

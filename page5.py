@@ -24,7 +24,6 @@ def download_storage_excel(url, save_dir=None, filename="monthly_gas_storage.xls
     with open(full_path, "wb") as f:
         f.write(response.content)
 
-    print(f"Downloaded to: {full_path}")
     return full_path
 
 def load_latest_file(keyword: str, ext=".csv") -> Path | None:
@@ -67,9 +66,6 @@ def load_eu_storage() -> pd.DataFrame:
         "5-Year Low": low,
     }).dropna().reset_index(drop=True)
 
-
-    print("Processed Storage:")
-    print(result.tail())
     return result
 
 def clean_storage_data(file_path):
@@ -95,21 +91,21 @@ def clean_storage_data(file_path):
 def create_storage_figure(df):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
+        x=df["Date"],
+        y=df["Actual Storage"],
+        mode="lines",
+        name="Actual Storage",
+        line=dict(color="blue"),
+        hoverinfo="skip",
+        showlegend=True
+    ))
+    fig.add_trace(go.Scatter(
         x=pd.concat([df["Date"], df["Date"][::-1]]),
         y=pd.concat([df["5-Year High"], df["5-Year Low"][::-1]]),
         fill="toself",
         fillcolor="rgba(200,200,200,0.4)",
         line=dict(color="rgba(255,255,255,0)"),
-        hoverinfo="skip",
-        showlegend=True,
         name="5-Year Range"
-    ))
-    fig.add_trace(go.Scatter(
-        x=df["Date"],
-        y=df["Actual Storage"],
-        mode="lines",
-        name="Actual Storage",
-        line=dict(color="blue")
     ))
     fig.add_trace(go.Scatter(
         x=df["Date"],
@@ -121,8 +117,7 @@ def create_storage_figure(df):
     fig.update_layout(
         xaxis_title="Year",
         yaxis_title="Storage (Bcf)",
-        template="plotly_white",
-        legend=dict(x=0.01, y=0.99)
+        template="plotly_white"
     )
     return fig
 

@@ -93,7 +93,7 @@ def clean_imp_exp_data(file_path, sheet_name="By Country Summary"):
         "New Zealand": "Oceania",
     }
     df_filtered.loc[:, "Region"] = df_filtered["Country"].map(country_region_map)
-    df_filtered.loc[:, "Region"] = df_filtered["Region"].fillna("Other")
+    df_filtered.loc[:, "Region"] = df_filtered["Region"].fillna("RoW")
     return df_filtered
 
 def get_last_12_months_data(df):

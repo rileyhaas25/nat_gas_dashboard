@@ -11,6 +11,14 @@ rig_url = 'https://rigcount.bakerhughes.com/static-files/c924b2e8-e61e-436a-842c
 # update monthly here under Monthly U.S. dry shale natural gas production by formation: https://www.eia.gov/outlooks/steo/data.php
 production_url = "https://www.eia.gov/outlooks/steo/xls/Fig43.xlsx"
 FOCUS_BASINS = ["Marcellus", "Haynesville", "Permian", "Eagle Ford", "Utica", "Woodford"]
+BASIN_COLOR_MAP = {
+    "Permian": "#636EFA",
+    "Haynesville": "#EF553B",
+    "Marcellus": "#00CC96",
+    "Utica": "#AB63FA",
+    "Eagle Ford": "#FFA15A",
+    "Woodford": "#19D3F3"
+}
 
 def download_and_load_rig(url, save_dir=None, filename='baker_hughes_rig_count.xlsx'):
     if save_dir is None:
@@ -197,6 +205,7 @@ def hist_area_chart(df):
         x="Year",
         y="Rig Count Value",
         color="Basin",
+        color_discrete_map=BASIN_COLOR_MAP,
         labels={"Rig Count Value": "Rig Count", "Year": "Year"},
         template="plotly_white"
     )
@@ -250,6 +259,7 @@ def historical_production(df):
         x="Date",
         y="Production (Bcf/d)",
         color="Basin",
+        color_discrete_map=BASIN_COLOR_MAP,
         labels={"Date": "Year", "Production (Bcf/d)": "Production (Bcf/d)"},
         template="plotly_white"
     )

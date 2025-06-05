@@ -211,12 +211,12 @@ layout = html.Div([
 
     html.Div([
         html.Div([
-            html.H3("U.S. LNG Production by Year"),
+            html.H3("U.S. LNG Production by Year (Online & Under Construction"),
             dcc.Graph(figure=us_graph)
         ], style={"width": "50%", "padding": "10px"}),
 
         html.Div([
-            html.H3("Qatar LNG Production by Year"),
+            html.H3("Qatar LNG Production by Year (Online & Under Construction)"),
             dcc.Graph(figure=qatar_graph)
         ], style={"width": "50%", "padding": "10px"})
     ], style={"display": "flex", "flexDirection": "row", "justifyContent": "space-between"}),

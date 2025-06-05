@@ -2,6 +2,7 @@ import pandas as pd
 from dash import html, dcc, dash_table, Input, Output
 import plotly.express as px
 from pathlib import Path
+import plotly.graph_objects as go
 
 data_dir = Path(__file__).resolve().parent
 
@@ -120,26 +121,56 @@ def us_production_chart(df):
         .reset_index()
         .rename(columns={"MTPA": "Cumulative MTPA"})
     )
+    yearly_cumulative["Cumulative Bcf/d"] = yearly_cumulative["Cumulative MTPA"] * 0.131584156
 
-    fig = px.bar(
-        yearly_cumulative,
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
         x=yearly_cumulative["Year"].astype(int).astype(str),
-        y="Cumulative MTPA",
-        text="Cumulative MTPA"
-    )
+        y=yearly_cumulative["Cumulative MTPA"],
+        marker_color="royalblue",
+        text=yearly_cumulative["Cumulative MTPA"],
+        textposition="outside",
+        texttemplate="%{text:.1f}",
+        name = "",
+        yaxis="y"
+    ))
+    # Invisible bars on secondary y-axis (just to activate it)
+    fig.add_trace(go.Bar(
+        x=yearly_cumulative["Year"].astype(int).astype(str),
+        y=yearly_cumulative["Cumulative Bcf/d"],
+        marker_color="rgba(0,0,0,0)",  # Fully transparent
+        name="",  # No legend entry
+        showlegend=False,
+        hoverinfo="skip",
+        yaxis="y2"
+    ))
 
-    fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
-    fig.update_layout(xaxis_type='category', xaxis_tickformat=',d')
+    max_mtpa = yearly_cumulative["Cumulative MTPA"].max()
+    max_bcf_d = yearly_cumulative["Cumulative Bcf/d"].max()
+
     fig.update_layout(
+        xaxis=dict(title="Year"),
+        yaxis=dict(
+            title="Cumulative MTPA",
+            side="left",
+            range=[0, max_mtpa * 1.1],
+            showgrid=False
+        ),
+        yaxis2=dict(
+            title="Cumulative Bcf/d",
+            side="right",
+            overlaying="y",
+            range=[0, max_bcf_d * 1.1],
+            showgrid=False,
+            showticklabels=True,
+            showline=True,
+            tickfont=dict(color="black")
+        ),
         template="plotly_white",
-        xaxis_title="Year",
-        yaxis_title="Capacity (MTPA)",
         uniformtext_minsize=8,
         uniformtext_mode="hide",
+        showlegend=False
     )
-
-    max_y = yearly_cumulative["Cumulative MTPA"].max()
-    fig.update_yaxes(range=[0, max_y * 1.1])
 
     return fig
 
@@ -156,25 +187,56 @@ def qatar_production_chart(df):
         .reset_index()
         .rename(columns={"MTPA": "Cumulative MTPA"})
     )
+    yearly_cumulative["Cumulative Bcf/d"] = yearly_cumulative["Cumulative MTPA"] * 0.131584156
 
-    fig = px.bar(
-        yearly_cumulative,
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
         x=yearly_cumulative["Year"].astype(int).astype(str),
-        y="Cumulative MTPA",
-        text="Cumulative MTPA"
-    )
+        y=yearly_cumulative["Cumulative MTPA"],
+        marker_color="royalblue",
+        text=yearly_cumulative["Cumulative MTPA"],
+        textposition="outside",
+        texttemplate="%{text:.1f}",
+        name="",
+        yaxis="y"
+    ))
+    # Invisible bars on secondary y-axis (just to activate it)
+    fig.add_trace(go.Bar(
+        x=yearly_cumulative["Year"].astype(int).astype(str),
+        y=yearly_cumulative["Cumulative Bcf/d"],
+        marker_color="rgba(0,0,0,0)",  # Fully transparent
+        name="",  # No legend entry
+        showlegend=False,
+        hoverinfo="skip",
+        yaxis="y2"
+    ))
 
-    fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
-    fig.update_layout(xaxis_type='category', xaxis_tickformat=',d')
+    max_mtpa = yearly_cumulative["Cumulative MTPA"].max()
+    max_bcf_d = yearly_cumulative["Cumulative Bcf/d"].max()
+
     fig.update_layout(
+        xaxis=dict(title="Year"),
+        yaxis=dict(
+            title="Cumulative MTPA",
+            side="left",
+            range=[0, max_mtpa * 1.1],
+            showgrid=False
+        ),
+        yaxis2=dict(
+            title="Cumulative Bcf/d",
+            side="right",
+            overlaying="y",
+            range=[0, max_bcf_d * 1.1],
+            showgrid=False,
+            showticklabels=True,
+            showline=True,
+            tickfont=dict(color="black")
+        ),
         template="plotly_white",
-        xaxis_title="Year",
-        yaxis_title="Capacity (MTPA)",
         uniformtext_minsize=8,
         uniformtext_mode="hide",
+        showlegend=False
     )
-    max_y = yearly_cumulative["Cumulative MTPA"].max()
-    fig.update_yaxes(range=[0, max_y * 1.1])
 
     return fig
 

@@ -163,63 +163,106 @@ last_valid.columns = ["Basin", "LastValidDate"]
 df_trimmed = df_melted.merge(last_valid, on="Basin")
 df_trimmed = df_trimmed[df_trimmed["Date"] <= df_trimmed["LastValidDate"]]
 
-# Historical Area Chart
-fig_historical = px.area(
-    df_grouped,
-    x="Year",
-    y="Rig Count Value",
-    color="Basin",
-    labels={"Rig Count Value": "Rig Count", "Year": "Year"},
-    template="plotly_white"
-)
+def fig_prod_change(df):
+    df = df.sort_values('Date')
+    basin_cols = df.columns[1:]
+    zero_total_rows = df[df[basin_cols].sum(axis=1) == 0].index
+    df = df.drop(index=zero_total_rows).copy()
+    latest_date = df['Date'].max()
+    prior_date = latest_date - pd.DateOffset(years=1)
+    latest_row = df.loc[df['Date'] == df['Date'][df['Date'].sub(latest_date).abs().idxmin()]]
+    prior_row = df.loc[df['Date'] == df['Date'][df['Date'].sub(prior_date).abs().idxmin()]]
+    change_df = (latest_row.iloc[0, 1:] - prior_row.iloc[0, 1:]).reset_index()
+    change_df.columns = ['Basin', 'YoY Change']
+    change_df["Label"] = change_df["YoY Change"].apply(lambda x: f"{x:.2f} BCF/d")
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=change_df["Basin"],
+        y=change_df["YoY Change"],
+        text=change_df["Label"],
+        textposition="outside",
+        cliponaxis=False,
+        marker_color="royalblue"
+    ))
+    fig.update_layout(
+        yaxis_title="Change in Production (BCF/d)",
+        yaxis_range=[-0.5, None],
+        margin=dict(t=80),
+        xaxis_tickangle=-45,
+        autosize=True,
+        template="plotly_white"
+    )
+    return fig
 
-# Current Week Bar + YoY Line + MoM Line
-fig_latest_combo = go.Figure()
-fig_latest_combo.add_trace(go.Bar(
-    x=df_current_grouped["Basin"],
-    y=df_current_grouped["Rig Count Value"],
-    name="Current Week Rig Count",
-    marker_color="steelblue"
-))
+def hist_area_chart(df):
+    # Historical Area Chart
+    fig_historical = px.area(
+        df,
+        x="Year",
+        y="Rig Count Value",
+        color="Basin",
+        labels={"Rig Count Value": "Rig Count", "Year": "Year"},
+        template="plotly_white"
+    )
+    return fig_historical
 
-# YoY % Change
-fig_latest_combo.add_trace(go.Scatter(
-    x=df_current_grouped["Basin"],
-    y=df_current_grouped["YoY % Change"],
-    name="YoY % Change",
-    mode="lines+markers",
-    yaxis="y2",
-    marker=dict(color="firebrick")
-))
+def current_week(df):
+    # Current Week Bar + YoY Line + MoM Line
+    fig_latest_combo = go.Figure()
+    fig_latest_combo.add_trace(go.Bar(
+        x=df["Basin"],
+        y=df["Rig Count Value"],
+        name="Current Week Rig Count",
+        marker_color="steelblue"
+    ))
 
-# MoM % Change
-fig_latest_combo.add_trace(go.Scatter(
-    x=df_current_grouped["Basin"],
-    y=df_current_grouped["MoM % Change"],
-    name="MoM % Change",
-    mode="lines+markers",
-    yaxis="y2",
-    marker=dict(color="orange")
-))
+    # YoY % Change
+    fig_latest_combo.add_trace(go.Scatter(
+        x=df["Basin"],
+        y=df["YoY % Change"],
+        name="YoY % Change",
+        mode="lines+markers",
+        yaxis="y2",
+        marker=dict(color="firebrick")
+    ))
 
-# Layout with Dual Axes
-fig_latest_combo.update_layout(
-    xaxis_title="Basin",
-    yaxis=dict(title="Rig Count", side="left"),
-    yaxis2=dict(title="% Change (YoY & MoM)", overlaying="y", side="right"),
-    legend=dict(x=0.01, y=1.15, xanchor="left", yanchor="bottom"),
-    template="plotly_white"
-)
+    # MoM % Change
+    fig_latest_combo.add_trace(go.Scatter(
+        x=df["Basin"],
+        y=df["MoM % Change"],
+        name="MoM % Change",
+        mode="lines+markers",
+        yaxis="y2",
+        marker=dict(color="orange")
+    ))
 
-# Historical Production Chart
-fig_production = px.area(
-    df_trimmed,
-    x="Date",
-    y="Production (Bcf/d)",
-    color="Basin",
-    labels={"Date": "Year", "Production (Bcf/d)": "Production"},
-    template="plotly_white"
-)
+    # Layout with Dual Axes
+    fig_latest_combo.update_layout(
+        xaxis_title="Basin",
+        yaxis=dict(title="Rig Count", side="left"),
+        yaxis2=dict(title="% Change (YoY & MoM)", overlaying="y", side="right"),
+        legend=dict(x=0.01, y=1.15, xanchor="left", yanchor="bottom"),
+        template="plotly_white"
+    )
+
+    return fig_latest_combo
+
+def historical_production(df):
+    # Historical Production Chart
+    fig_production = px.area(
+        df,
+        x="Date",
+        y="Production (Bcf/d)",
+        color="Basin",
+        labels={"Date": "Year", "Production (Bcf/d)": "Production (Bcf/d)"},
+        template="plotly_white"
+    )
+    return fig_production
+
+production_change_chart = fig_prod_change(df_production)
+rig_historical = hist_area_chart(df_grouped)
+rig_current_week = current_week(df_current_grouped)
+hist_prod_area = historical_production(df_trimmed)
 
 def get_sources(sources):
     return html.Div([
@@ -242,19 +285,26 @@ layout = html.Div([
     html.Div([
         html.Div([
             html.H3("Historical Rig Counts by Basin"),
-            dcc.Graph(figure=fig_historical)
+            dcc.Graph(figure=rig_historical)
         ], style={"width": "50%", "padding": "10px"}),
 
         html.Div([
             html.H3("Current Week Rig Count"),
-            dcc.Graph(figure=fig_latest_combo)
+            dcc.Graph(figure=rig_current_week)
         ], style={"width": "50%", "padding": "10px"}),
     ], style={"display": "flex", "flexDirection": "row"}),
 
     html.Div([
-        html.H3("Monthly Dry Shale Gas Production by Basin"),
-        dcc.Graph(figure=fig_production)
-    ], style={"width": "100%", "padding": "10px"}),
+        html.Div([
+            html.H3("Monthly Dry Shale Gas Production by Basin"),
+            dcc.Graph(figure=hist_prod_area)
+        ], style={"width": "50%", "padding": "10px"}),
+
+        html.Div([
+            html.H3("Year-over-Year Change in Dry Shale Gas Production by Basin"),
+            dcc.Graph(figure=production_change_chart)
+        ], style={"width": "50%", "padding": "10px"}),
+    ], style={"display": "flex", "flexDirection": "row"}),
     get_sources(page3_sources)
 ])
 

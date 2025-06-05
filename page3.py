@@ -65,10 +65,29 @@ def get_most_recent_date(df):
     latest_date = df["US_PublishDate"].max()
     return df[df["US_PublishDate"] == latest_date]
 
+def clean_rig_count_yearly(file_path, sheet_name="NAM Yearly"):
+    raw_df = pd.read_excel(file_path, sheet_name=sheet_name, header=None, engine="openpyxl")
+    header_row = \
+    raw_df[raw_df.apply(lambda row: row.astype(str).str.contains("Basin", case=False, na=False)).any(axis=1)].index[0]
+    df = pd.read_excel(file_path, sheet_name=sheet_name, header=header_row, engine="openpyxl").dropna(how="all").dropna(
+        axis=1, how="all")
+    df.columns = df.columns.str.strip()
+    df = df.map(lambda x: x.strip() if isinstance(x, str) else x)
+    df = df[df["Country"] == "UNITED STATES"]
+    df = df[df["DrillFor"] == "Gas"]
+    woodford_aliases = ["Ardmore Woodford", "Arkoma Woodford", "Cana Woodford"]
+    df["Basin"] = df["Basin"].replace(woodford_aliases, "Woodford")
+    df = df[df["Basin"].isin(FOCUS_BASINS)]
+    df = df[df["Year"] >= 2016]
+    df = df.groupby(["Year", "Basin"], as_index=False)["Rig Count Value"].sum()
+    return df
+
 def prep_data_for_graph(df_all, df_latest):
+    # Add Year and Month columns
     df_all["Year"] = df_all["US_PublishDate"].dt.year
     df_all["Month"] = df_all["US_PublishDate"].dt.to_period("M").dt.to_timestamp()
 
+    # Filter to focus basins only
     df_all = df_all[df_all["Basin"].isin(FOCUS_BASINS)]
     df_latest = df_latest[df_latest["Basin"].isin(FOCUS_BASINS)]
 
@@ -76,21 +95,23 @@ def prep_data_for_graph(df_all, df_latest):
     df_monthly = df_all.groupby(["Month", "Basin"], as_index=False)["Rig Count Value"].sum()
     df_monthly["MoM % Change"] = df_monthly.groupby("Basin")["Rig Count Value"].pct_change() * 100
 
-    # Get MoM % Change for current month
+    # Extract current month and corresponding MoM % change
     current_month = df_latest["US_PublishDate"].max().to_period("M").to_timestamp()
     mom_current = df_monthly[df_monthly["Month"] == current_month][["Basin", "MoM % Change"]]
 
     # === YoY Comparison ===
     current_date = df_latest["US_PublishDate"].iloc[0]
-    prior_window = (current_date - pd.DateOffset(years=1) - timedelta(days=3),
-                    current_date - pd.DateOffset(years=1) + timedelta(days=3))
-    df_prior = df_all[(df_all["US_PublishDate"] >= prior_window[0]) & (df_all["US_PublishDate"] <= prior_window[1])]
+    prior_start = current_date - pd.DateOffset(years=1) - timedelta(days=3)
+    prior_end = current_date - pd.DateOffset(years=1) + timedelta(days=3)
 
-    df_prior_grouped = df_prior.groupby("Basin")["Rig Count Value"].sum().reset_index().rename(
-        columns={"Rig Count Value": "Prior Year Rig Count"})
+    df_prior = df_all[(df_all["US_PublishDate"] >= prior_start) & (df_all["US_PublishDate"] <= prior_end)]
+    df_prior_grouped = df_prior.groupby("Basin")["Rig Count Value"].sum().reset_index()
+    df_prior_grouped.rename(columns={"Rig Count Value": "Prior Year Rig Count"}, inplace=True)
+
+    # Current week aggregation
     df_current_grouped = df_latest.groupby("Basin")["Rig Count Value"].sum().reset_index()
 
-    # Merge with YoY
+    # Merge YoY % Change
     df_current_grouped = df_current_grouped.merge(df_prior_grouped, on="Basin", how="left")
     df_current_grouped["YoY % Change"] = (
                                                  (df_current_grouped["Rig Count Value"] - df_current_grouped[
@@ -98,70 +119,45 @@ def prep_data_for_graph(df_all, df_latest):
                                                  df_current_grouped["Prior Year Rig Count"]
                                          ) * 100
 
-    # Merge with MoM
+    # Merge MoM % Change
     df_current_grouped = df_current_grouped.merge(mom_current, on="Basin", how="left")
 
-    # === Year-End Weekly Snapshot for Each Year (last rig count of each year) ===
-    df_all = df_all.copy()
-    df_all["Week"] = df_all["US_PublishDate"].dt.to_period("W").dt.to_timestamp()
-
-    # Get last publish date per year
-    last_week_dates = (
-        df_all.groupby(["Year"])["US_PublishDate"]
-        .max()
-        .reset_index()
-        .rename(columns={"US_PublishDate": "LastDate"})
-    )
-
-    # Merge to get only rows for the last week of each year
-    df_year_end = df_all.merge(last_week_dates, left_on=["Year", "US_PublishDate"], right_on=["Year", "LastDate"])
-
-    # Group by Basin and Year to get year-end snapshot
-    df_grouped = (
-        df_year_end.groupby(["Year", "Basin"], as_index=False)["Rig Count Value"]
-        .sum()
-    )
-
-    return df_grouped, df_current_grouped
+    return df_current_grouped
 
 def clean_production_data(file_path, sheet_name="43"):
     # Step 1: Read from row 27 (index 27) as header
     df = pd.read_excel(file_path, sheet_name=sheet_name, header=27, engine="openpyxl")
 
-    # Step 2: Rename the first column
     df.rename(columns={df.columns[0]: "Date"}, inplace=True)
-
-    # Step 3: Parse date column and filter from 2016+
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df = df[df["Date"].dt.year >= 2016]
 
-    # Step 4: Match actual column names to focus basins
     columns_to_keep = ["Date"] + [col for col in df.columns if any(basin in str(col) for basin in FOCUS_BASINS)]
 
-    df_filtered = df[columns_to_keep]
+    return df[columns_to_keep]
 
-    return df_filtered
+# === Rig Count Processing ===
+rig_file_path = download_and_load_rig(rig_url)
+df_rig_all = clean_rig_count_data(rig_file_path)
+df_rig_all = filter_columns(df_rig_all)
+df_rig_latest = get_most_recent_date(df_rig_all)
+df_rig_current_grouped = prep_data_for_graph(df_rig_all, df_rig_latest)
+df_yearly = clean_rig_count_yearly(rig_file_path)
 
-path = download_and_load_rig(rig_url)
-df_all = clean_rig_count_data(path)
-df_all = filter_columns(df_all)
-df_latest = get_most_recent_date(df_all)
-df_grouped, df_current_grouped = prep_data_for_graph(df_all, df_latest)
-path_2 = download_and_load_production(production_url)
-df_production = clean_production_data(path_2)
-# Reshape to long format
-df_melted = df_production.melt(id_vars="Date", var_name="Basin", value_name="Production (Bcf/d)")
+# === Production Data Processing ===
+prod_file_path = download_and_load_production(production_url)
+df_prod_raw = clean_production_data(prod_file_path)
 
-# Filter out zeros and nulls
-non_zero = df_melted[df_melted["Production (Bcf/d)"] > 0]
+# Reshape to long format and filter invalid values
+df_prod_long = df_prod_raw.melt(id_vars="Date", var_name="Basin", value_name="Production (Bcf/d)")
+df_prod_long = df_prod_long[df_prod_long["Production (Bcf/d)"] > 0]
 
-# Get latest date per basin with non-zero production
-last_valid = non_zero.groupby("Basin")["Date"].max().reset_index()
-last_valid.columns = ["Basin", "LastValidDate"]
+# Filter out future values by basin-specific cutoff
+last_valid_prod = df_prod_long.groupby("Basin")["Date"].max().reset_index()
+last_valid_prod.columns = ["Basin", "LastValidDate"]
 
-# Merge back to filter out dates beyond last valid production
-df_trimmed = df_melted.merge(last_valid, on="Basin")
-df_trimmed = df_trimmed[df_trimmed["Date"] <= df_trimmed["LastValidDate"]]
+df_prod_trimmed = df_prod_long.merge(last_valid_prod, on="Basin")
+df_prod_trimmed = df_prod_trimmed[df_prod_trimmed["Date"] <= df_prod_trimmed["LastValidDate"]]
 
 def fig_prod_change(df):
     df = df.sort_values('Date')
@@ -259,10 +255,10 @@ def historical_production(df):
     )
     return fig_production
 
-production_change_chart = fig_prod_change(df_production)
-rig_historical = hist_area_chart(df_grouped)
-rig_current_week = current_week(df_current_grouped)
-hist_prod_area = historical_production(df_trimmed)
+rig_historical = hist_area_chart(df_yearly)
+rig_current_week = current_week(df_rig_current_grouped)
+hist_prod_area = historical_production(df_prod_trimmed)
+production_change_chart = fig_prod_change(df_prod_raw)
 
 def get_sources(sources):
     return html.Div([

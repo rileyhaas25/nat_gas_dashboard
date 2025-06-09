@@ -17,7 +17,7 @@ def load_pipeline_data() -> pd.DataFrame:
     if file_path is None:
         raise FileNotFoundError("No LNG Production Excel file found in the data directory.")
     df = pd.read_excel(file_path)
-    df["First Cargo"] = pd.to_datetime(df["First Cargo"], errors="coerce")
+    df["First Cargo"] = pd.to_datetime(df["First Cargo"], errors="coerce").dt.date
     df["Year"] = df["First Cargo"].dt.year
     df = df.drop(columns=["Last Updated"], errors="ignore")
     df = df.dropna(how="all").reset_index(drop=True)

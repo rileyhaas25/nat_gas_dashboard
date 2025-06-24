@@ -4,6 +4,7 @@ from dash import html, dcc, Input, Output, callback, dash_table
 from pathlib import Path
 import datetime
 import pytz
+import plotly.graph_objects as go
 
 
 # Constants
@@ -12,6 +13,12 @@ data_dir = Path(__file__).resolve().parent  # Folder where files are uploaded
 
 # Function to load the most recent file containing a specific keyword
 def load_latest_file(keyword: str, ext=".csv") -> Path | None:
+    files = list(data_dir.glob(f"*{keyword}*{ext}"))
+    if not files:
+        return None
+    return max(files, key=lambda f: f.stat().st_mtime)
+
+def load_latest_excel(keyword: str, ext=".xlsx") -> Path | None:
     files = list(data_dir.glob(f"*{keyword}*{ext}"))
     if not files:
         return None
@@ -39,7 +46,7 @@ def load_jkm() -> pd.DataFrame:
 
 # Function to load and clean TTF CSV data, converting to USD
 def load_ttf() -> pd.DataFrame:
-    ttf_path = load_latest_file("TTF")
+    ttf_path = load_latest_file("TTF_Daily")
     if ttf_path is None:
         return pd.DataFrame(columns=["Date", "TTF (USD)"])
     df = pd.read_csv(ttf_path)
@@ -47,6 +54,33 @@ def load_ttf() -> pd.DataFrame:
     eur_usd_rate = 1.16
     df["TTF (USD)"] = pd.to_numeric(df["Price"], errors="coerce") * eur_usd_rate / 3.412
     return df[["Date", "TTF (USD)"]].dropna()
+
+def parse_month_label(label: str):
+    try:
+        # Example input: "July '25"
+        parts = label.strip().split()
+        month_name = parts[0]
+        year_suffix = parts[1].replace("'", "")  # remove apostrophe
+        year_full = int("20" + year_suffix)      # e.g. '25 → 2025
+        date_obj = pd.to_datetime(f"{month_name} {year_full}", format="%B %Y")
+        return date_obj
+    except Exception:
+        return pd.NaT
+
+def load_ttf_forward() -> pd.DataFrame:
+    ttf_for_path = load_latest_excel("TTFCurve")
+    if ttf_for_path is None:
+        return pd.DataFrame(columns=["Month", "TTF_Forward_Price"])
+    df = pd.read_excel(ttf_for_path, sheet_name="WTI_Curve", header=None, engine="openpyxl")
+    date_labels = df.iloc[1, 6:]
+    months = date_labels.astype(str).apply(parse_month_label)
+    prices = df.iloc[3, 6:]
+    ttf_for_df = pd.DataFrame({
+        "Month": months,
+        "TTF_Forward_Price": prices.values
+    })
+    ttf_for_df["Date"] = ttf_for_df["Month"]
+    return ttf_for_df.reset_index(drop=True)
 
 # Function to merge all daily benchmark data into a wide-format DataFrame
 def get_benchmark_prices_daily():
@@ -159,9 +193,59 @@ def get_last_modified_time():
     local_time = utc_time.astimezone(eastern)
     return f"Last updated: {local_time.strftime('%B %d, %Y at %I:%M %p %Z')}"
 
+def plot_ttf_vs_us_export_costs(ttf_df: pd.DataFrame, hh_df: pd.DataFrame) -> go.Figure:
+    fig = go.Figure()
+    shipping = 0.70
+    regas = 0.35
+    liquefaction = 2.75
+    latest = hh_df.sort_values("Date", ascending=False).iloc[0]
+    hh = latest["Henry Hub"]
 
-# Load to preview result
+    variable_cost = (hh * 1.15) + shipping + regas
+    all_in_cost = variable_cost + liquefaction
+
+    # Line 1: TTF Forwards
+    fig.add_trace(go.Scatter(
+        x=ttf_df["Date"],
+        y=ttf_df["TTF_Forward_Price"],
+        mode="lines",
+        name="TTF forwards",
+        line=dict(color="blue", width=3)
+    ))
+
+    # Line 2: US all-in cost to Europe
+    fig.add_trace(go.Scatter(
+        x=ttf_df["Date"],
+        y=[all_in_cost] * len(ttf_df),
+        mode="lines",
+        name="US all-in cost to Europe",
+        line=dict(color="lightblue", dash="dash", width=2)
+    ))
+
+    # Line 3: US var cost to Europe
+    fig.add_trace(go.Scatter(
+        x=ttf_df["Date"],
+        y=[variable_cost] * len(ttf_df),
+        mode="lines",
+        name="US var cost to Europe",
+        line=dict(color="red", dash="dash", width=2)
+    ))
+
+    # Formatting
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis=dict(title="$/mmBtu", range=[0, None]),
+        template="plotly_white",
+        legend=dict(orientation="h", y=-0.2, x=0.05),
+        margin=dict(l=60, r=40, t=40, b=60)
+    )
+
+    return fig
+
+# Load to preview the result
 benchmark_df = get_benchmark_prices_daily()
+ttf_forward_df = load_ttf_forward()
+ttf_forward_chart = plot_ttf_vs_us_export_costs(ttf_forward_df, benchmark_df)
 price_chart = create_benchmark_price_chart(benchmark_df)
 time_stamp = get_last_modified_time()
 price_table = create_spot_price_table(benchmark_df)
@@ -221,6 +305,10 @@ layout = html.Div([
             ], style={"flex": "1", "margin": "0 20px", "boxShadow": "0 2px 4px rgba(0, 0, 0, 0.1)", "borderRadius": "8px", "padding": "20px", "backgroundColor": "#fafafa"}),
         ], style={"display": "flex", "justifyContent": "center"})
     ]),
+    html.Div([
+        html.H2("TTF Forwards vs US LNG Export Costs", style={"textAlign": "center", "marginTop": "40px"}),
+        dcc.Graph(figure=ttf_forward_chart)
+    ], style={"margin": "40px 20px"}),
     get_sources(page1_sources)
 ])
 

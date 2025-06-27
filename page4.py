@@ -245,24 +245,24 @@ layout = html.Div([
 
     html.Div([
         html.H3("Annual U.S. Exports"),
-        dcc.Graph(figure=fig_exports_yearly)
+        dcc.Graph(figure=fig_exports_yearly, style={"height": "500px", "overflow": "hidden"})
     ], style={"width": "100%", "padding": "10px"}),
 
     # Top row: Monthly & Regional graphs
     html.Div([
         html.Div([
             html.H3("Monthly Imports vs Exports (LTM)"),
-            dcc.Graph(figure=fig_monthly)
+            dcc.Graph(figure=fig_monthly, style={"height": "500px", "overflow": "hidden"})
         ], style={"width": "32%", "padding": "10px"}),
 
         html.Div([
             html.H3("U.S. Exports by Region"),
-            dcc.Graph(figure=fig_region)
+            dcc.Graph(figure=fig_region, style={"height": "500px", "overflow": "hidden"})
         ], style={"width": "32%", "padding": "10px"}),
 
         html.Div([
             html.H3("U.S. Exports to Europe vs Asia"),
-            dcc.Graph(figure=eur_vs_asia)  # ← your new figure
+            dcc.Graph(figure=eur_vs_asia, style={"height": "500px", "overflow": "hidden"})  # ← your new figure
         ], style={"width": "32%", "padding": "10px"}),
     ], style={"display": "flex", "flex-direction": "row", "justify-content": "space-between", "flex-wrap": "nowrap"}),
 

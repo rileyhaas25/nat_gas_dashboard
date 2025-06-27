@@ -291,24 +291,24 @@ layout = html.Div([
     html.Div([
         html.Div([
             html.H3("Historical Rig Counts by Basin"),
-            dcc.Graph(figure=rig_historical)
+            dcc.Graph(figure=rig_historical, style={"height": "500px", "overflow": "hidden"})
         ], style={"width": "50%", "padding": "10px"}),
 
         html.Div([
             html.H3("Current Week Rig Count"),
-            dcc.Graph(figure=rig_current_week)
+            dcc.Graph(figure=rig_current_week, style={"height": "500px", "overflow": "hidden"})
         ], style={"width": "50%", "padding": "10px"}),
     ], style={"display": "flex", "flexDirection": "row"}),
 
     html.Div([
         html.Div([
             html.H3("Monthly Dry Shale Gas Production by Basin"),
-            dcc.Graph(figure=hist_prod_area)
+            dcc.Graph(figure=hist_prod_area, style={"height": "500px", "overflow": "hidden"})
         ], style={"width": "50%", "padding": "10px"}),
 
         html.Div([
             html.H3("Year-over-Year Change in Dry Shale Gas Production by Basin"),
-            dcc.Graph(figure=production_change_chart)
+            dcc.Graph(figure=production_change_chart, style={"height": "500px", "overflow": "hidden"})
         ], style={"width": "50%", "padding": "10px"}),
     ], style={"display": "flex", "flexDirection": "row"}),
     get_sources(page3_sources)

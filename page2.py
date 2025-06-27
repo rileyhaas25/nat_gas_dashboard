@@ -131,6 +131,7 @@ def us_production_chart(df):
         text=yearly_cumulative["Cumulative MTPA"],
         textposition="outside",
         texttemplate="%{text:.1f}",
+        cliponaxis=True,
         name = "",
         yaxis="y"
     ))
@@ -197,6 +198,7 @@ def qatar_production_chart(df):
         text=yearly_cumulative["Cumulative MTPA"],
         textposition="outside",
         texttemplate="%{text:.1f}",
+        cliponaxis=True,
         name="",
         yaxis="y"
     ))
@@ -274,12 +276,12 @@ layout = html.Div([
     html.Div([
         html.Div([
             html.H3("U.S. LNG Production by Year (Online & Under Construction)"),
-            dcc.Graph(figure=us_graph)
+            dcc.Graph(figure=us_graph, style={"height": "500px", "overflow": "hidden"})
         ], style={"width": "50%", "padding": "10px"}),
 
         html.Div([
             html.H3("Qatar LNG Production by Year (Online & Under Construction)"),
-            dcc.Graph(figure=qatar_graph)
+            dcc.Graph(figure=qatar_graph, style={"height": "500px", "overflow": "hidden"})
         ], style={"width": "50%", "padding": "10px"})
     ], style={"display": "flex", "flexDirection": "row", "justifyContent": "space-between"}),
 
@@ -318,12 +320,12 @@ layout = html.Div([
             html.Div([
                 html.Div([
                     html.H3("Global LNG Supply by Country/Region"),
-                    dcc.Graph(figure=lng_supply)
+                    dcc.Graph(figure=lng_supply, style={"height": "500px", "overflow": "hidden"})
                 ], style={"width": "50%", "padding": "10px"}),
 
                 html.Div([
                     html.H3("Global LNG Demand by Region"),
-                    dcc.Graph(figure=lng_demand)
+                    dcc.Graph(figure=lng_demand, style={"height": "500px", "overflow": "hidden"})
                 ], style={"width": "50%", "padding": "10px"})
             ], style={"display": "flex", "flexDirection": "row", "justifyContent": "space-between"})
     ]),

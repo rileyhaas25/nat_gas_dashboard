@@ -7,7 +7,7 @@ import pytz
 import plotly.graph_objects as go
 
 
-# Constants
+# Constants and updated
 data_dir = Path(__file__).resolve().parent  # Folder where files are uploaded
 
 

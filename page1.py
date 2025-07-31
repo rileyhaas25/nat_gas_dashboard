@@ -51,7 +51,7 @@ def load_ttf() -> pd.DataFrame:
         return pd.DataFrame(columns=["Date", "TTF (USD)"])
     df = pd.read_csv(ttf_path)
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    eur_usd_rate = 1.15
+    eur_usd_rate = 1.14
     df["TTF (USD)"] = pd.to_numeric(df["Price"], errors="coerce") * eur_usd_rate / 3.412
     return df[["Date", "TTF (USD)"]].dropna()
 

@@ -7,7 +7,7 @@ from datetime import timedelta
 import plotly.graph_objects as go
 
 # update weekly here: https://rigcount.bakerhughes.com/na-rig-count
-rig_url = 'https://rigcount.bakerhughes.com/static-files/d032f810-e526-4bb4-b937-92e10d429af9'
+rig_url = 'https://rigcount.bakerhughes.com/static-files/e98bcf83-c458-4a88-8f35-4ac4d77628bb'
 # update monthly here under Monthly U.S. dry shale natural gas production by formation: https://www.eia.gov/outlooks/steo/data.php
 production_url = "https://www.eia.gov/outlooks/steo/xls/Fig43.xlsx"
 FOCUS_BASINS = ["Marcellus", "Haynesville", "Permian", "Eagle Ford", "Utica", "Woodford"]

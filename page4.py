@@ -5,7 +5,7 @@ import plotly.express as px
 from dash import html, dcc
 
 # update monthly here: https://www.energy.gov/fecm/articles/natural-gas-imports-and-exports-monthly-2025
-url = 'https://www.energy.gov/sites/default/files/2025-09/1.%20U.S.%20Natural%20Gas%20Imports%20Exports%20and%20Re-Exports%20Summary%20%28Jan%202000%20-%20Jul%202025%29.xlsx'
+url = 'https://www.energy.gov/sites/default/files/2025-10/1.%20U.S.%20Natural%20Gas%20Imports%20Exports%20and%20Re-Exports%20Summary%20%28Jan%202000%20-%20Aug%202025%29.xlsx'
 
 def download_and_load_file(url, save_dir=None, filename='import_and_exports.xlsx'):
     if save_dir is None:
